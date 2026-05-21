@@ -1,0 +1,93 @@
+{% extends "base.html" %}{% block title %}Verify ZKP Proof{% endblock %}
+{% block extra_head %}<style>
+.verify-scene{min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:2rem;}
+.verify-card{background:#ffffff;border:1px solid rgba(0,0,0,0.1);border-radius:20px;padding:2.5rem;max-width:520px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,0.08);}
+.result-valid{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.25);border-radius:16px;padding:1.75rem;text-align:center;margin-top:1.5rem;}
+.result-invalid{background:rgba(251,113,133,0.06);border:1px solid rgba(251,113,133,0.25);border-radius:16px;padding:1.75rem;text-align:center;margin-top:1.5rem;}
+.claim-pill{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(240,164,48,0.1);border:1px solid rgba(240,164,48,0.25);border-radius:8px;padding:0.4rem 1rem;font-size:0.875rem;font-weight:600;color:#c47a1a;margin:0.5rem 0;}
+.privacy-note{background:rgba(45,212,191,0.05);border:1px solid rgba(45,212,191,0.15);border-radius:10px;padding:0.875rem 1rem;font-size:0.78rem;color:rgba(0,0,0,0.45);margin-top:1.25rem;line-height:1.7;}
+.token-input{font-family:monospace;font-size:1.1rem;letter-spacing:0.1em;text-transform:uppercase;text-align:center;font-weight:700;}
+</style>{% endblock %}
+{% block content %}
+<div class="verify-scene">
+<div class="verify-card reveal">
+  <div style="text-align:center;margin-bottom:1.75rem;">
+    <div style="width:64px;height:64px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.5rem;">🔍</div>
+    <h1 style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:800;margin-bottom:0.3rem;color:#1a1a1a;">Verify ZKP Proof</h1>
+    <p style="color:rgba(0,0,0,0.45);font-size:0.85rem;line-height:1.6;">Enter a 16-character proof token to verify a claim about a credential — without seeing any personal details.</p>
+  </div>
+
+  <form method="GET" action="/zkp/verify">
+    <div class="form-group">
+      <label>Proof Token</label>
+      <div class="input-wrap">
+        <i class="fas fa-key input-icon"></i>
+        <input type="text" name="token" class="form-control token-input"
+               value="{{ token }}" placeholder="XXXXXXXXXXXXXXXX"
+               maxlength="16" required>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-amber" style="width:100%;justify-content:center;padding:0.8rem;">
+      <i class="fas fa-search"></i> Verify Proof
+    </button>
+  </form>
+
+  {% if result %}
+    {% if result.valid %}
+    <div class="result-valid">
+      <div style="font-size:2rem;margin-bottom:0.5rem;">✅</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:800;color:#34d399;margin-bottom:0.3rem;">Proof Verified</div>
+      <div style="color:rgba(0,0,0,0.45);font-size:0.82rem;margin-bottom:1rem;">This cryptographic proof is valid and has not been tampered with.</div>
+
+      <div class="claim-pill">
+        <i class="fas fa-check-circle"></i>
+        {{ result.claim_label }}: <strong>{{ result.claim_value }}</strong>
+      </div>
+
+      <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;text-align:left;">
+        <div style="background:#f0f0f0;border-radius:8px;padding:0.6rem 0.875rem;">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);">Learner</div>
+          <div style="font-size:0.85rem;font-weight:600;color:#1a1a1a;">{{ result.learner }}</div>
+        </div>
+        <div style="background:#f0f0f0;border-radius:8px;padding:0.6rem 0.875rem;">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);">Issued</div>
+          <div style="font-size:0.85rem;font-weight:600;color:#1a1a1a;">{{ result.issued_at }}</div>
+        </div>
+        <div style="background:#f0f0f0;border-radius:8px;padding:0.6rem 0.875rem;">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);">Expires</div>
+          <div style="font-size:0.85rem;font-weight:600;color:#1a1a1a;">{{ result.expires_at }}</div>
+        </div>
+        <div style="background:#f0f0f0;border-radius:8px;padding:0.6rem 0.875rem;">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);">Token</div>
+          <div style="font-size:0.85rem;font-weight:600;color:#c47a1a;font-family:monospace;">{{ result.proof_token }}</div>
+        </div>
+      </div>
+
+      <div class="privacy-note">
+        <i class="fas fa-eye-slash" style="color:#2dd4bf;margin-right:0.4rem;"></i>
+        <strong style="color:#1a1a1a;">Privacy Protected:</strong> This verification only confirms the above claim. The learner's full credential details — title, provider, issue date, and other credentials — are not revealed to you.
+      </div>
+    </div>
+    {% else %}
+    <div class="result-invalid">
+      <div style="font-size:2rem;margin-bottom:0.5rem;">❌</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:800;color:#fb7185;margin-bottom:0.4rem;">Proof Invalid</div>
+      <div style="color:rgba(0,0,0,0.45);font-size:0.85rem;">{{ result.error }}</div>
+    </div>
+    {% endif %}
+  {% elif token %}
+    <div class="result-invalid" style="margin-top:1.5rem;">
+      <div style="font-size:2rem;">❌</div>
+      <div style="color:#fb7185;font-weight:700;margin-top:0.5rem;">Token not found</div>
+      <div style="color:rgba(0,0,0,0.45);font-size:0.82rem;margin-top:0.3rem;">This token does not exist or has expired.</div>
+    </div>
+  {% endif %}
+
+  <div style="text-align:center;margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid rgba(0,0,0,0.1);">
+    <a href="/" style="font-size:0.8rem;color:rgba(0,0,0,0.45);"><i class="fas fa-home"></i> Back to Home</a>
+    <span style="color:rgba(0,0,0,0.15);margin:0 0.5rem;">·</span>
+    <a href="/verify_hash" style="font-size:0.8rem;color:rgba(0,0,0,0.45);">Verify Hash Instead</a>
+  </div>
+</div>
+</div>
+{% endblock %}

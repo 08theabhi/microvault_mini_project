@@ -1,0 +1,33 @@
+# ── Secrets ──
+.env
+*.env
+
+# ── Database ──
+*.db
+*.sqlite3
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.Python
+venv/
+env/
+
+# ── User uploads (never commit user data) ──
+static/uploads/*
+!static/uploads/.gitkeep
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db

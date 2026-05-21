@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block title %}Add Credential{% endblock %}
+{% block extra_head %}<style>
+.upload-layout{display:grid;grid-template-columns:1fr 320px;gap:2rem;}
+@media(max-width:1000px){.upload-layout{grid-template-columns:1fr;}}
+.dropzone{border:2px dashed rgba(0,0,0,0.15);border-radius:14px;padding:2.5rem;text-align:center;cursor:pointer;transition:all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);background:#f0f0f0;position:relative;}
+.dropzone:hover,.dropzone.drag{border-color:#c47a1a;background:rgba(240,164,48,0.08);}
+.dropzone i{font-size:2.5rem;color:rgba(0,0,0,0.45);margin-bottom:0.75rem;}
+.dropzone h3{font-size:0.9rem;margin-bottom:0.3rem;color:#1a1a1a;}
+.dropzone p{font-size:0.78rem;color:rgba(0,0,0,0.45);}
+.file-ok{margin-top:0.75rem;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);color:#34d399;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;display:none;align-items:center;gap:0.5rem;}
+.level-g{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-top:0.4rem;}
+.lvl-opt input{display:none;}
+.lvl-opt label{display:block;text-align:center;padding:0.55rem;border:1px solid rgba(0,0,0,0.15);border-radius:9px;font-size:0.78rem;cursor:pointer;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);font-weight:600;color:rgba(0,0,0,0.45);}
+.lvl-opt input:checked+label{border-color:#c47a1a;background:rgba(240,164,48,0.08);color:#c47a1a;}
+.tip-card{background:linear-gradient(135deg,#ffffff,#f9f9f9);border:1px solid rgba(0,0,0,0.1);border-radius:16px;padding:1.5rem;margin-bottom:1.25rem;position:relative;overflow:hidden;}
+.tip-card::before{content:"";position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(240,164,48,0.25),transparent 70%);pointer-events:none;}
+</style>{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.5rem;"><a href="/dashboard" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a></div>
+<div class="page-header reveal"><h1>Add Credential</h1><p>Upload your certificate and fill in the details</p></div>
+<div class="upload-layout">
+  <div>
+    <form method="POST" action="/upload" enctype="multipart/form-data" class="card reveal">
+      <div class="dropzone" id="dz" onclick="document.getElementById('fi').click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <h3>Drop your certificate here</h3>
+        <p>PDF, PNG, JPG — max 10MB</p>
+        <input type="file" id="fi" name="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none">
+        <div class="file-ok" id="fok"><i class="fas fa-check-circle"></i><span id="fn"></span></div>
+      </div>
+      <hr>
+      <div class="form-group"><label>Credential Title *</label><input type="text" name="title" class="form-control" placeholder="e.g. AWS Certified Solutions Architect" required></div>
+      <div class="g2"><div class="form-group"><label>Issuing Organization *</label><input type="text" name="provider" class="form-control" placeholder="e.g. Amazon Web Services" required></div><div class="form-group"><label>Issue Date *</label><input type="date" name="issue_date" class="form-control" required></div></div>
+      <div class="g2"><div class="form-group"><label>Expiry Date <span style="color:rgba(0,0,0,0.45);font-weight:400;text-transform:none;">(optional)</span></label><input type="date" name="expiry_date" class="form-control"></div><div class="form-group"><label>Verification URL <span style="color:rgba(0,0,0,0.45);font-weight:400;text-transform:none;">(optional)</span></label><input type="url" name="credential_url" class="form-control" placeholder="https://…"></div></div>
+      <div class="form-group"><label>Description</label><textarea name="description" class="form-control" placeholder="What skills did you gain?"></textarea></div>
+      <div class="g2">
+        <div class="form-group"><label>Skill Category</label><select name="skill_category" class="form-control">{% for cat in ["Technology","Data Science","Design","Business","Leadership","Marketing","Healthcare","Engineering","Language","General"] %}<option>{{ cat }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Proficiency Level</label><div class="level-g">{% for lvl in ["Beginner","Intermediate","Advanced"] %}<div class="lvl-opt"><input type="radio" name="level" id="l{{ lvl }}" value="{{ lvl }}" {% if lvl=="Beginner" %}checked{% endif %}><label for="l{{ lvl }}">{{ lvl }}</label></div>{% endfor %}</div></div>
+      </div>
+      <div style="display:flex;gap:0.75rem;"><button type="submit" class="btn btn-amber btn-lg"><i class="fas fa-upload"></i> Upload Credential</button><a href="/dashboard" class="btn btn-ghost btn-lg">Cancel</a></div>
+    </form>
+  </div>
+  <div class="stagger-children">
+    <div class="tip-card">
+      <h4 style="font-size:0.9rem;color:#c47a1a;margin-bottom:0.75rem;position:relative;"><i class="fas fa-lightbulb"></i> Tips for Fast Verification</h4>
+      {% for tip in ["Upload the official PDF certificate","Use exact provider name as on certificate","Add the verification URL if available","Include a clear description of skills gained"] %}
+      <div style="display:flex;gap:0.5rem;font-size:0.82rem;color:rgba(0,0,0,0.45);margin-bottom:0.5rem;"><span style="color:#c47a1a;">→</span>{{ tip }}</div>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <h4 style="font-size:0.85rem;color:rgba(0,0,0,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem;">How It Works</h4>
+      {% for s,title,desc in [("1","Upload","Gets a unique SHA-256 hash"),("2","Review","Admin checks document vs. details"),("3","Verified","Share hash as tamper-proof proof")] %}
+      <div style="display:flex;gap:0.75rem;{% if not loop.last %}margin-bottom:1rem;{% endif %}">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(240,164,48,0.08);color:#c47a1a;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0;">{{ s }}</div>
+        <div><div style="font-weight:600;font-size:0.875rem;color:#1a1a1a;">{{ title }}</div><div style="font-size:0.78rem;color:rgba(0,0,0,0.45);">{{ desc }}</div></div>
+      </div>{% endfor %}
+    </div>
+  </div>
+</div>
+<script>
+const dz=document.getElementById("dz"),fi=document.getElementById("fi"),fok=document.getElementById("fok"),fn=document.getElementById("fn");
+fi.addEventListener("change",()=>{if(fi.files[0]){fn.textContent=fi.files[0].name;fok.style.display="flex";}});
+["dragover","dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.toggle("drag",ev==="dragover");if(ev==="drop"&&e.dataTransfer.files[0]){fi.files=e.dataTransfer.files;fn.textContent=e.dataTransfer.files[0].name;fok.style.display="flex";}}));
+</script>
+{% endblock %}

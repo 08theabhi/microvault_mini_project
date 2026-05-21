@@ -1,0 +1,73 @@
+{% extends "base.html" %}{% block title %}Profile{% endblock %}
+{% block extra_head %}<style>
+.profile-layout{display:grid;grid-template-columns:240px 1fr;gap:2rem;}
+@media(max-width:900px){.profile-layout{grid-template-columns:1fr;}}
+.sidebar-card{position:sticky;top:calc(var(--nav-h)+1rem);height:fit-content;}
+.av-big{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Fraunces",serif;font-size:2rem;font-weight:800;margin:0 auto 1rem;transition:background 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
+.swatches{display:flex;gap:0.45rem;justify-content:center;flex-wrap:wrap;margin-top:0.75rem;}
+.swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);}
+.swatch:hover,.swatch.sel{border-color:#1a1a1a;transform:scale(1.2);}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid rgba(0,0,0,0.1);margin-bottom:1.5rem;}
+.tb{padding:0.65rem 1.2rem;border:none;background:none;font-family:"DM Sans",sans-serif;font-size:0.82rem;font-weight:600;color:rgba(0,0,0,0.45);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);}
+.tb.on{color:#c47a1a;border-bottom-color:#c47a1a;}
+.tp{display:none;animation:riseUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
+.tp.on{display:block;}
+</style>{% endblock %}
+{% block content %}
+<div class="page-header reveal"><h1>Profile Settings</h1><p>Manage your public profile and account security</p></div>
+<div class="profile-layout">
+  <div class="sidebar-card">
+    <div class="card" style="text-align:center;">
+      <div class="av-big" id="avPreview" style="background:{{ user.avatar_color or "#c47a1a" }};color:#1a0800;">{{ user.name[0]|upper }}</div>
+      <div style="font-family:'Fraunces',serif;font-weight:700;font-size:1rem;color:#1a1a1a;" id="namePrev">{{ user.name }}</div>
+      <div style="color:rgba(0,0,0,0.45);font-size:0.78rem;margin-top:0.2rem;">{{ user.role|title }}</div>
+      <div class="swatches">
+        {% for col in ["#c47a1a","#2dd4bf","#34d399","#fb7185","#a78bfa","#60a5fa","#f472b6","#ffffff"] %}
+        <div class="swatch {% if (user.avatar_color or "#c47a1a")==col %}sel{% endif %}" style="background:{{ col }};" onclick="setCol('{{ col }}',this)"></div>
+        {% endfor %}
+      </div>
+      <hr style="margin:1.25rem 0;">
+      <a href="/public/{{ user.user_id }}" target="_blank" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;"><i class="fas fa-external-link-alt"></i> View Public</a>
+    </div>
+  </div>
+  <div>
+    <div class="tab-bar"><button class="tb on" onclick="st('info',this)"><i class="fas fa-user"></i> Info</button><button class="tb" onclick="st('links',this)"><i class="fas fa-link"></i> Links</button><button class="tb" onclick="st('settings',this)"><i class="fas fa-cog"></i> Settings</button><button class="tb" onclick="st('security',this)"><i class="fas fa-lock"></i> Security</button></div>
+    <div id="tp-info" class="tp on">
+      <form method="POST" class="card">
+        <input type="hidden" name="action" value="profile"><input type="hidden" name="avatar_color" id="ci1" value="{{ user.avatar_color or "#c47a1a" }}">
+        <div class="g2"><div class="form-group"><label>Full Name</label><input type="text" name="name" class="form-control" value="{{ user.name }}" oninput="document.getElementById('namePrev').textContent=this.value" required></div><div class="form-group"><label>Headline</label><input type="text" name="headline" class="form-control" value="{{ user.headline or "" }}" placeholder="e.g. Full-Stack Developer"></div></div>
+        <div class="form-group"><label>Bio</label><textarea name="bio" class="form-control" placeholder="Tell employers about yourself…">{{ user.bio or "" }}</textarea></div>
+        <div class="form-group"><label>Location</label><input type="text" name="location" class="form-control" value="{{ user.location or "" }}" placeholder="e.g. Bengaluru, India"></div>
+        <div class="form-group"><label>Language</label><select name="lang" class="form-control"><option value="en" {% if user.lang=="en" %}selected{% endif %}>🇬🇧 English</option><option value="hi" {% if user.lang=="hi" %}selected{% endif %}>🇮🇳 हिंदी</option><option value="kn" {% if user.lang=="kn" %}selected{% endif %}>🇮🇳 ಕನ್ನಡ</option><option value="ta" {% if user.lang=="ta" %}selected{% endif %}>🇮🇳 தமிழ்</option><option value="de" {% if user.lang=="de" %}selected{% endif %}>🇩🇪 Deutsch</option></select></div>
+        <button type="submit" class="btn btn-amber"><i class="fas fa-save"></i> Save Changes</button>
+      </form>
+    </div>
+    <div id="tp-links" class="tp">
+      <form method="POST" class="card"><input type="hidden" name="action" value="profile"><input type="hidden" name="avatar_color" id="ci2" value="{{ user.avatar_color or "#c47a1a" }}"><input type="hidden" name="name" value="{{ user.name }}"><input type="hidden" name="lang" value="{{ user.lang or "en" }}">
+        <div class="form-group"><label><i class="fab fa-linkedin" style="color:#0a66c2;"></i> LinkedIn</label><input type="url" name="linkedin" class="form-control" value="{{ user.linkedin or "" }}" placeholder="https://linkedin.com/in/..."></div>
+        <div class="form-group"><label><i class="fab fa-github"></i> GitHub</label><input type="url" name="github" class="form-control" value="{{ user.github or "" }}" placeholder="https://github.com/..."></div>
+        <div class="form-group"><label><i class="fas fa-globe" style="color:#2dd4bf;"></i> Website</label><input type="url" name="website" class="form-control" value="{{ user.website or "" }}" placeholder="https://yoursite.com"></div>
+        <button type="submit" class="btn btn-amber"><i class="fas fa-save"></i> Save Links</button>
+      </form>
+    </div>
+    <div id="tp-settings" class="tp">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-bottom:1px solid rgba(0,0,0,0.1);"><div><div style="font-weight:600;font-size:0.9rem;">Dark Mode</div><div style="color:rgba(0,0,0,0.45);font-size:0.8rem;">Toggle light/dark interface</div></div><button class="btn btn-ghost btn-sm" onclick="toggleDark()"><i class="fas fa-{{ "sun" if dark_mode else "moon" }}"></i> {{ "Light" if dark_mode else "Dark" }}</button></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 0;"><div><div style="font-weight:600;font-size:0.9rem;">Share Profile</div><div style="color:rgba(0,0,0,0.45);font-size:0.8rem;">Copy your public profile link</div></div><button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(window.location.origin+'/public/{{ user.user_id }}');this.innerHTML='✓ Copied!'"><i class="fas fa-copy"></i> Copy</button></div>
+      </div>
+    </div>
+    <div id="tp-security" class="tp">
+      <form method="POST" class="card"><input type="hidden" name="action" value="password">
+        <h3 style="font-family:'Fraunces',serif;font-size:1.05rem;margin-bottom:1.25rem;color:#1a1a1a;"><i class="fas fa-key" style="color:#c47a1a;margin-right:0.5rem;"></i>Change Password</h3>
+        <div class="form-group"><label>Current Password</label><input type="password" name="current_password" class="form-control" placeholder="••••••••" required></div>
+        <div class="form-group"><label>New Password</label><input type="password" name="new_password" class="form-control" placeholder="Min. 6 characters" required minlength="6"></div>
+        <button type="submit" class="btn btn-amber"><i class="fas fa-key"></i> Change Password</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+function st(name,btn){document.querySelectorAll(".tb").forEach(b=>b.classList.remove("on"));document.querySelectorAll(".tp").forEach(p=>p.classList.remove("on"));btn.classList.add("on");document.getElementById("tp-"+name).classList.add("on");}
+function setCol(c,el){["ci1","ci2"].forEach(id=>{const i=document.getElementById(id);if(i)i.value=c;});document.getElementById("avPreview").style.background=c;document.querySelectorAll(".swatch").forEach(s=>s.classList.remove("sel"));el.classList.add("sel");}
+</script>
+{% endblock %}

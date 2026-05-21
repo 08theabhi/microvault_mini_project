@@ -1,0 +1,221 @@
+{% extends "base.html" %}{% block title %}Verify Your Email{% endblock %}
+{% block extra_head %}
+<style>
+.auth-scene { min-height:calc(100vh - var(--nav-h)); display:flex; align-items:center; justify-content:center; padding:2rem; }
+.auth-card  { background:#ffffff; border:1px solid rgba(0,0,0,0.1); border-radius:20px; padding:2.75rem; box-shadow:0 32px 80px rgba(0,0,0,0.1); width:100%; max-width:420px; position:relative; }
+.auth-card::before { content:''; position:absolute; top:-1px; left:20%; right:20%; height:1px; background:linear-gradient(90deg,transparent,#c47a1a,transparent); }
+
+/* OTP digit boxes */
+.otp-row   { display:flex; gap:0.6rem; justify-content:center; margin:1.75rem 0; }
+.otp-digit {
+  width:52px; height:60px;
+  background:#f0f0f0; border:1.5px solid rgba(0,0,0,0.15);
+  border-radius:12px; text-align:center;
+  font-size:1.5rem; font-weight:800; font-family:'Fraunces',serif;
+  color:#1a1a1a; caret-color:#c47a1a;
+  transition:border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  outline:none;
+}
+.otp-digit:focus {
+  border-color:#c47a1a;
+  box-shadow:0 0 0 3px rgba(240,164,48,0.25);
+  transform:translateY(-2px);
+}
+.otp-digit.filled { border-color:rgba(240,164,48,0.4); background:#f9f9f9; }
+
+/* Countdown timer */
+.timer-wrap  { text-align:center; margin-top:1.25rem; }
+.timer-ring  { display:inline-flex; align-items:center; gap:0.5rem; background:#f0f0f0; border:1px solid rgba(0,0,0,0.15); border-radius:20px; padding:0.35rem 1rem; font-size:0.82rem; color:rgba(0,0,0,0.45); }
+.timer-num   { font-family:'Fraunces',serif; font-weight:700; color:#c47a1a; font-size:0.95rem; min-width:26px; }
+.resend-btn  { background:none; border:none; color:#c47a1a; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; cursor:pointer; padding:0; transition:opacity 0.2s; }
+.resend-btn:disabled { color:rgba(0,0,0,0.45); cursor:not-allowed; opacity:0.5; }
+
+.email-chip  { display:inline-flex; align-items:center; gap:0.4rem; background:#f0f0f0; border:1px solid rgba(0,0,0,0.15); border-radius:8px; padding:0.3rem 0.75rem; font-size:0.82rem; color:rgba(0,0,0,0.45); margin-bottom:0.5rem; }
+.email-chip strong { color:#1a1a1a; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-scene">
+<div class="reveal" style="width:100%;max-width:420px;">
+  <div class="auth-card">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div style="display:flex;gap:0;margin-bottom:1.5rem;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);">
+        <div style="flex:1;padding:0.5rem;text-align:center;font-size:0.72rem;font-weight:600;background:rgba(52,211,153,0.1);color:#34d399;">① Details ✓</div>
+        <div style="flex:1;padding:0.5rem;text-align:center;font-size:0.72rem;font-weight:600;background:rgba(52,211,153,0.1);color:#34d399;">② Phone ✓</div>
+        <div style="flex:1;padding:0.5rem;text-align:center;font-size:0.72rem;font-weight:600;background:rgba(240,164,48,0.1);color:#c47a1a;">③ Email OTP</div>
+      </div>
+      <div style="width:64px;height:64px;background:rgba(240,164,48,0.08);border:1px solid rgba(240,164,48,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.5rem;">✉️</div>
+      <h2 style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:700;margin-bottom:0.4rem;color:#1a1a1a;">Check your inbox</h2>
+      <p style="color:rgba(0,0,0,0.45);font-size:0.875rem;line-height:1.6;">We sent a 6-digit verification code to</p>
+      <div class="email-chip"><i class="fas fa-envelope" style="font-size:0.75rem;"></i><strong>{{ email }}</strong></div>
+    </div>
+
+    <!-- OTP Form -->
+    <form method="POST" id="otpForm">
+      <div class="otp-row" id="otpRow">
+        {% for i in range(6) %}
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]"
+               id="d{{ i }}" autocomplete="{% if i==0 %}one-time-code{% else %}off{% endif %}">
+        {% endfor %}
+      </div>
+      <input type="hidden" name="otp" id="otpHidden">
+
+      <button type="submit" class="btn btn-amber" id="submitBtn"
+              style="width:100%;justify-content:center;padding:0.8rem;font-size:0.95rem;" disabled>
+        <i class="fas fa-check-circle"></i> Verify Email
+      </button>
+    </form>
+
+    <!-- Timer and Resend -->
+    <div class="timer-wrap">
+      <div class="timer-ring">
+        <i class="fas fa-clock" style="font-size:0.75rem;"></i>
+        Code expires in <span class="timer-num" id="timerNum">10:00</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1.25rem;font-size:0.83rem;color:rgba(0,0,0,0.45);">
+      Didn't receive it?
+      <button class="resend-btn" id="resendBtn" onclick="resendOtp()" disabled>Resend code</button>
+      <span id="resendCooldown" style="font-size:0.8rem;color:rgba(0,0,0,0.45);"></span>
+    </div>
+
+    <div id="resendMsg" style="margin-top:0.75rem;"></div>
+
+    <div style="text-align:center;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid rgba(0,0,0,0.1);">
+      <a href="/register" style="font-size:0.82rem;color:rgba(0,0,0,0.45);"><i class="fas fa-arrow-left"></i> Use a different email</a>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+const digits  = Array.from(document.querySelectorAll('.otp-digit'));
+const hidden  = document.getElementById('otpHidden');
+const submitBtn = document.getElementById('submitBtn');
+const form    = document.getElementById('otpForm');
+
+// ── Digit navigation ──
+digits.forEach((d, i) => {
+  d.addEventListener('input', e => {
+    // Allow only digits
+    d.value = d.value.replace(/\D/g,'');
+    if(d.value) {
+      d.classList.add('filled');
+      if(i < 5) digits[i+1].focus();
+    } else {
+      d.classList.remove('filled');
+    }
+    syncHidden();
+  });
+
+  d.addEventListener('keydown', e => {
+    if(e.key === 'Backspace' && !d.value && i > 0) {
+      digits[i-1].value = '';
+      digits[i-1].classList.remove('filled');
+      digits[i-1].focus();
+      syncHidden();
+    }
+    if(e.key === 'ArrowLeft'  && i > 0) digits[i-1].focus();
+    if(e.key === 'ArrowRight' && i < 5) digits[i+1].focus();
+  });
+
+  // Handle paste
+  d.addEventListener('paste', e => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+    [...pasted.slice(0,6)].forEach((ch, j) => {
+      if(digits[i+j]) {
+        digits[i+j].value = ch;
+        digits[i+j].classList.add('filled');
+      }
+    });
+    const nextEmpty = digits.findIndex(d => !d.value);
+    (nextEmpty >= 0 ? digits[nextEmpty] : digits[5]).focus();
+    syncHidden();
+  });
+});
+
+function syncHidden() {
+  const code = digits.map(d => d.value).join('');
+  hidden.value = code;
+  submitBtn.disabled = code.length < 6;
+}
+
+// ── Submit with loading state ──
+form.addEventListener('submit', e => {
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
+  submitBtn.disabled = true;
+});
+
+// ── Countdown timer (10 min) ──
+let totalSecs = {{ (10 * 60)|int }};
+let resendCooldown = 60;
+const timerEl   = document.getElementById('timerNum');
+const resendBtn = document.getElementById('resendBtn');
+const cooldownEl = document.getElementById('resendCooldown');
+
+function fmt(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+
+const mainTimer = setInterval(() => {
+  totalSecs--;
+  timerEl.textContent = fmt(totalSecs);
+  if(totalSecs <= 60) timerEl.style.color = '#fb7185';
+  if(totalSecs <= 0) {
+    clearInterval(mainTimer);
+    timerEl.textContent = 'Expired';
+    submitBtn.disabled = true;
+    digits.forEach(d => { d.disabled = true; d.style.opacity='0.4'; });
+  }
+}, 1000);
+
+// Resend cooldown (60s before first resend allowed)
+const resendTimer = setInterval(() => {
+  resendCooldown--;
+  if(resendCooldown <= 0) {
+    clearInterval(resendTimer);
+    resendBtn.disabled = false;
+    cooldownEl.textContent = '';
+  } else {
+    cooldownEl.textContent = ` (${resendCooldown}s)`;
+  }
+}, 1000);
+
+// ── Resend OTP ──
+async function resendOtp() {
+  resendBtn.disabled = true;
+  resendBtn.textContent = 'Sending…';
+  try {
+    const res = await fetch('/resend-otp', { method:'POST', headers:{'Content-Type':'application/json'} });
+    const d   = await res.json();
+    const msg = document.getElementById('resendMsg');
+    if(d.ok) {
+      msg.innerHTML = '<div class="flash success" style="margin-top:0;"><i class="fas fa-check-circle"></i> ' + d.message + '</div>';
+      // Reset main timer
+      totalSecs = 600; timerEl.style.color = '#c47a1a';
+      // Reset digits
+      digits.forEach(d => { d.value=''; d.classList.remove('filled'); d.disabled=false; d.style.opacity=''; });
+      digits[0].focus(); syncHidden();
+      // Cooldown resend again
+      let cd = 60;
+      cooldownEl.textContent = ` (${cd}s)`;
+      const t = setInterval(() => { cd--; cooldownEl.textContent = cd > 0 ? ` (${cd}s)` : ''; if(cd<=0){clearInterval(t);resendBtn.disabled=false;} }, 1000);
+    } else {
+      msg.innerHTML = '<div class="flash error" style="margin-top:0;"><i class="fas fa-times-circle"></i> ' + d.error + '</div>';
+      resendBtn.disabled = false;
+    }
+    resendBtn.textContent = 'Resend code';
+  } catch(err) {
+    document.getElementById('resendMsg').innerHTML = '<div class="flash error" style="margin-top:0;">Network error. Try again.</div>';
+    resendBtn.disabled = false;
+    resendBtn.textContent = 'Resend code';
+  }
+}
+
+// Auto-focus first box
+digits[0].focus();
+</script>
+{% endblock %}

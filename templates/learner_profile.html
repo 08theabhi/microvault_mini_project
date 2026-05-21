@@ -1,0 +1,184 @@
+{% extends "base.html" %}{% block title %}{{ learner.name }}{% endblock %}
+{% block extra_head %}<style>
+.lp-layout{display:grid;grid-template-columns:1fr 300px;gap:2rem;}
+@media(max-width:900px){.lp-layout{grid-template-columns:1fr;}}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;animation:riseUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
+.modal-box{background:#f9f9f9;border:1px solid rgba(0,0,0,0.15);border-radius:20px;padding:2rem;max-width:460px;width:100%;box-shadow:0 40px 100px rgba(0,0,0,0.12);}
+</style>{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.5rem;"><a href="/employer" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Search</a></div>
+
+<div class="lp-layout">
+  <!-- Main -->
+  <div>
+    <!-- Profile card -->
+    <div class="card reveal" style="margin-bottom:1.25rem;">
+      <div style="display:flex;gap:1.25rem;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <div style="width:68px;height:68px;border-radius:50%;background:{{ learner.avatar_color or '#c47a1a' }};display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.6rem;font-weight:800;color:#1a0800;flex-shrink:0;">{{ learner.name[0]|upper }}</div>
+        <div style="flex:1;">
+          <h1 style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;margin-bottom:0.2rem;color:#1a1a1a;">{{ learner.name }}</h1>
+          {% if learner.headline %}<p style="color:rgba(0,0,0,0.45);font-size:0.875rem;margin-bottom:0.2rem;">{{ learner.headline }}</p>{% endif %}
+          {% if learner.location %}<p style="color:rgba(0,0,0,0.45);font-size:0.78rem;"><i class="fas fa-map-marker-alt" style="color:#c47a1a;margin-right:0.3rem;"></i>{{ learner.location }}</p>{% endif %}
+        </div>
+        <!-- Message button -->
+        {% if session.user_id != learner.user_id %}
+        <button class="btn btn-amber" onclick="openMsg()" style="flex-shrink:0;">
+          <i class="fas fa-envelope"></i> Send Message
+        </button>
+        {% endif %}
+      </div>
+      {% if learner.bio %}
+      <p style="color:rgba(0,0,0,0.75);line-height:1.75;font-size:0.875rem;margin-bottom:1rem;padding-top:0.75rem;border-top:1px solid rgba(0,0,0,0.1);">{{ learner.bio }}</p>
+      {% endif %}
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        {% if learner.linkedin %}<a href="{{ learner.linkedin }}" target="_blank" class="btn btn-ghost btn-sm"><i class="fab fa-linkedin"></i> LinkedIn</a>{% endif %}
+        {% if learner.github %}<a href="{{ learner.github }}" target="_blank" class="btn btn-ghost btn-sm"><i class="fab fa-github"></i> GitHub</a>{% endif %}
+        {% if learner.website %}<a href="{{ learner.website }}" target="_blank" class="btn btn-ghost btn-sm"><i class="fas fa-globe"></i> Website</a>{% endif %}
+        <a href="/public/{{ learner.user_id }}" target="_blank" class="btn btn-ghost btn-sm"><i class="fas fa-external-link-alt"></i> Public Profile</a>
+      </div>
+    </div>
+
+    <!-- Credentials -->
+    <h2 style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;margin-bottom:1rem;color:#1a1a1a;">
+      Credentials <span style="color:rgba(0,0,0,0.45);font-weight:400;font-size:0.85rem;">({{ credentials|length }} total · {{ verified }} verified)</span>
+    </h2>
+    {% for c in credentials %}
+    <div class="card card-sm reveal" style="display:flex;gap:0.875rem;align-items:flex-start;margin-bottom:0.75rem;">
+      <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+        background:{% if c.status=='verified' %}rgba(52,211,153,0.12){% elif c.status=='rejected' %}rgba(251,113,133,0.12){% else %}rgba(240,164,48,0.12){% endif %};
+        color:{% if c.status=='verified' %}#34d399{% elif c.status=='rejected' %}#fb7185{% else %}#c47a1a{% endif %};">
+        <i class="fas fa-{% if c.status=='verified' %}certificate{% elif c.status=='rejected' %}times-circle{% else %}clock{% endif %}"></i>
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9rem;color:#1a1a1a;">{{ c.title }}</div>
+        <div style="color:rgba(0,0,0,0.45);font-size:0.78rem;margin-top:0.2rem;">{{ c.provider }} · {{ c.skill_category }} · {{ c.level }}</div>
+        {% if c.issue_date %}<div style="color:rgba(0,0,0,0.45);font-size:0.72rem;margin-top:0.1rem;">Issued: {{ c.issue_date }}</div>{% endif %}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
+        <span class="badge badge-{{ c.status }}">{{ c.status|title }}</span>
+        {% if session.role in ['admin','employer'] and c.status=='unverified' %}
+        <button class="btn btn-teal btn-sm btn-icon" onclick="verNow('{{ c.credential_id }}',this)" title="Verify"><i class="fas fa-check"></i></button>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card empty-state"><span class="ei">🎓</span><h3>No credentials yet</h3></div>
+    {% endfor %}
+  </div>
+
+  <!-- Sidebar -->
+  <div>
+    <div class="card reveal" style="margin-bottom:1rem;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:1rem;">Profile Summary</div>
+      {% for n,l,c in [
+        (credentials|length,'Total Credentials','#c47a1a'),
+        (verified,'Verified','#34d399'),
+        (categories|length,'Skill Areas','#2dd4bf'),
+      ] %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.1);font-size:0.875rem;">
+        <span style="color:rgba(0,0,0,0.45);">{{ l }}</span>
+        <strong style="color:{{ c }};font-family:'Fraunces',serif;font-size:1.1rem;">{{ n }}</strong>
+      </div>
+      {% endfor %}
+      {% if view_count %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;font-size:0.875rem;">
+        <span style="color:rgba(0,0,0,0.45);">Profile Views (week)</span>
+        <strong style="color:#a78bfa;font-family:'Fraunces',serif;font-size:1.1rem;">{{ view_count }}</strong>
+      </div>
+      {% endif %}
+      <div style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:0.35rem;">
+        {% for cat in categories %}<span class="tag">{{ cat }}</span>{% endfor %}
+      </div>
+    </div>
+
+    {% if session.user_id != learner.user_id %}
+    <button onclick="openMsg()" class="btn btn-amber reveal" style="width:100%;justify-content:center;padding:0.875rem;">
+      <i class="fas fa-envelope"></i> Send Message
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── MESSAGE MODAL ── -->
+<div class="modal-overlay" id="msgModal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h3 style="font-family:'Fraunces',serif;font-size:1.05rem;color:#1a1a1a;">Message <span style="color:#c47a1a;">{{ learner.name }}</span></h3>
+      <button onclick="closeMsg()" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.45);font-size:1.2rem;">✕</button>
+    </div>
+    <p style="color:rgba(0,0,0,0.45);font-size:0.82rem;margin-bottom:1.25rem;">Your message will appear directly in their inbox. They can reply back to you.</p>
+    <div class="form-group">
+      <label>Subject</label>
+      <div class="input-wrap"><i class="fas fa-tag input-icon"></i>
+        <input type="text" id="msgSubject" class="form-control" placeholder="e.g. Job opportunity at TechCorp" value="Message from {{ session.name }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Message</label>
+      <textarea id="msgText" class="form-control" rows="5"
+        placeholder="Hi {{ learner.name }}, I came across your profile and I'm impressed by your credentials…"></textarea>
+    </div>
+    <div style="display:flex;gap:0.75rem;">
+      <button class="btn btn-amber" style="flex:1;justify-content:center;" onclick="sendMsg()" id="sendBtn">
+        <i class="fas fa-paper-plane"></i> Send Message
+      </button>
+      <button class="btn btn-ghost" onclick="closeMsg()">Cancel</button>
+    </div>
+    <div id="msgResult" style="margin-top:0.75rem;"></div>
+  </div>
+</div>
+
+<script>
+function openMsg(){document.getElementById('msgModal').classList.add('open');document.getElementById('msgText').focus();}
+function closeMsg(){document.getElementById('msgModal').classList.remove('open');document.getElementById('msgResult').innerHTML='';}
+
+async function sendMsg(){
+  const subject = document.getElementById('msgSubject').value.trim() || 'Message from {{ session.name }}';
+  const msg     = document.getElementById('msgText').value.trim();
+  if(!msg){alert('Please write a message first.');return;}
+
+  const btn = document.getElementById('sendBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+  btn.disabled  = true;
+
+  try {
+    // Use /contact/ which now saves to messages table
+    const res = await fetch('/contact/{{ learner.user_id }}', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({message: msg, subject: subject})
+    });
+    const d = await res.json();
+    if(d.status === 'sent'){
+      document.getElementById('msgResult').innerHTML =
+        '<div class="flash success"><i class="fas fa-check-circle"></i> Message sent! They will see it in their inbox.</div>';
+      document.getElementById('msgText').value = '';
+      btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+      setTimeout(closeMsg, 2000);
+    } else {
+      document.getElementById('msgResult').innerHTML =
+        '<div class="flash error"><i class="fas fa-exclamation-circle"></i> ' + (d.error||'Failed to send') + '</div>';
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+      btn.disabled  = false;
+    }
+  } catch(e) {
+    document.getElementById('msgResult').innerHTML =
+      '<div class="flash error">Network error. Please try again.</div>';
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
+    btn.disabled  = false;
+  }
+}
+
+async function verNow(id,btn){
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+  const res=await fetch('/verify/'+id,{method:'POST',headers:{'Content-Type':'application/json'}});
+  const d=await res.json();
+  if(d.status==='verified'){btn.innerHTML='<i class="fas fa-check"></i>';btn.style.background='#34d399';}
+  else{btn.disabled=false;btn.innerHTML='<i class="fas fa-check"></i>';}
+}
+
+// Close modal on backdrop click
+document.getElementById('msgModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeMsg();});
+</script>
+{% endblock %}

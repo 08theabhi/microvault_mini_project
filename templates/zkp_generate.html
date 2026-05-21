@@ -1,0 +1,300 @@
+{% extends "base.html" %}{% block title %}Generate ZKP Proof{% endblock %}
+{% block extra_head %}<style>
+.zkp-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+@media(max-width:768px){.zkp-layout{grid-template-columns:1fr;}}
+.claim-opt{display:flex;flex-direction:column;gap:0.3rem;padding:1rem 1.1rem;border:1.5px solid rgba(0,0,0,0.15);border-radius:12px;cursor:pointer;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);margin-bottom:0.6rem;user-select:none;}
+.claim-opt:hover{border-color:#c47a1a;background:rgba(240,164,48,0.04);}
+.claim-opt.selected{border-color:#c47a1a;background:rgba(240,164,48,0.08);}
+.claim-opt .claim-title{font-weight:700;font-size:0.875rem;color:#1a1a1a;}
+.claim-opt .claim-desc{font-size:0.75rem;color:rgba(0,0,0,0.45);margin-top:0.15rem;}
+.claim-preview{background:rgba(240,164,48,0.06);border:1.5px solid rgba(240,164,48,0.25);border-radius:12px;padding:1rem 1.25rem;margin:0.875rem 0;display:none;}
+.claim-preview.show{display:block;animation:riseUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
+.proof-row{background:#f0f0f0;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:0.875rem 1rem;margin-bottom:0.6rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+.proof-token-big{font-family:monospace;font-size:1.05rem;font-weight:800;color:#c47a1a;letter-spacing:0.12em;background:#f9f9f9;padding:0.35rem 0.875rem;border-radius:6px;border:1px solid rgba(240,164,48,0.2);}
+.privacy-badge{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:0.35rem 0.875rem;font-size:0.75rem;color:#34d399;font-weight:600;}
+
+/* Success popup overlay */
+.zkp-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:1rem;}
+.zkp-popup.show{display:flex;animation:riseUp 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.zkp-popup-box{background:#f9f9f9;border:1px solid rgba(52,211,153,0.3);border-radius:20px;padding:2rem;max-width:460px;width:100%;text-align:center;box-shadow:0 40px 100px rgba(0,0,0,0.12);position:relative;}
+.zkp-popup-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,#34d399,transparent);}
+.token-display{font-family:monospace;font-size:1.6rem;font-weight:900;letter-spacing:0.18em;color:#c47a1a;background:#f0f0f0;border:2px solid rgba(240,164,48,0.3);border-radius:12px;padding:0.75rem 1rem;margin:1.25rem 0;display:block;word-break:break-all;}
+</style>{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem;"><a href="/credential/{{ credential.credential_id }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Credential</a></div>
+
+<div style="margin-bottom:2rem;" class="reveal">
+  <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c47a1a;margin-bottom:0.4rem;"><i class="fas fa-shield-alt"></i> Zero-Knowledge Proof</div>
+  <h1 style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;margin-bottom:0.5rem;color:#1a1a1a;">Generate Privacy Proof</h1>
+  <p style="color:rgba(0,0,0,0.45);font-size:0.9rem;max-width:580px;line-height:1.7;">Prove a specific claim about your credential — <strong style="color:#1a1a1a;">without revealing any other details.</strong> Share the token with anyone to let them verify.</p>
+  <div style="margin-top:0.875rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+    <span class="privacy-badge"><i class="fas fa-eye-slash"></i> Privacy Preserving</span>
+    <span class="privacy-badge"><i class="fas fa-lock"></i> Cryptographically Secure</span>
+    <span class="privacy-badge"><i class="fas fa-check-double"></i> Verifiable by Anyone</span>
+  </div>
+</div>
+
+<div class="zkp-layout">
+  <!-- LEFT: Generate form -->
+  <div class="card reveal">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.1);">
+      <div style="width:40px;height:40px;background:rgba(240,164,48,0.08);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#c47a1a;font-size:1rem;flex-shrink:0;"><i class="fas fa-certificate"></i></div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;color:#1a1a1a;">{{ credential.title }}</div>
+        <div style="font-size:0.78rem;color:rgba(0,0,0,0.45);">{{ credential.provider }}</div>
+      </div>
+      <span class="badge badge-verified" style="margin-left:auto;flex-shrink:0;">✓ Verified</span>
+    </div>
+
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.875rem;">
+      <i class="fas fa-hand-pointer" style="margin-right:0.3rem;"></i>Click what you want to prove
+    </div>
+
+    <div class="claim-opt" id="opt_is_verified" onclick="selectClaim('is_verified','verified','This credential is verified ✓')">
+      <span class="claim-title"><i class="fas fa-check-circle" style="color:#34d399;margin-right:0.4rem;"></i>This credential is verified</span>
+      <span class="claim-desc">Proves admin approval — nothing else revealed</span>
+    </div>
+    <div class="claim-opt" id="opt_has_category" onclick="selectClaim('has_category','{{ credential.skill_category }}','Has a {{ credential.skill_category }} credential')">
+      <span class="claim-title"><i class="fas fa-layer-group" style="color:#2dd4bf;margin-right:0.4rem;"></i>I have a <strong>{{ credential.skill_category }}</strong> credential</span>
+      <span class="claim-desc">Proves skill category — title and provider stay private</span>
+    </div>
+    <div class="claim-opt" id="opt_has_level" onclick="selectClaim('has_level','{{ credential.level }}','Has a {{ credential.level }} level credential')">
+      <span class="claim-title"><i class="fas fa-chart-bar" style="color:#a78bfa;margin-right:0.4rem;"></i>I have an <strong>{{ credential.level }}</strong> level credential</span>
+      <span class="claim-desc">Proves proficiency level — all other details stay private</span>
+    </div>
+    <div class="claim-opt" id="opt_provider_is" onclick="selectClaim('provider_is','{{ credential.provider }}','Credential issued by {{ credential.provider }}')">
+      <span class="claim-title"><i class="fas fa-building" style="color:#c47a1a;margin-right:0.4rem;"></i>My credential is from <strong>{{ credential.provider }}</strong></span>
+      <span class="claim-desc">Proves provider — your name and dates stay private</span>
+    </div>
+    <div class="claim-opt" id="opt_issued_after" onclick="selectClaim('issued_after','{{ credential.issue_date[:4] }}-01-01','Credential issued in {{ credential.issue_date[:4] }} or later')">
+      <span class="claim-title"><i class="fas fa-calendar-check" style="color:#fb7185;margin-right:0.4rem;"></i>My credential was issued in <strong>{{ credential.issue_date[:4] }}</strong> or later</span>
+      <span class="claim-desc">Proves recency — exact date stays private</span>
+    </div>
+
+    <!-- Preview -->
+    <div class="claim-preview" id="claimPreview">
+      <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c47a1a;margin-bottom:0.35rem;"><i class="fas fa-eye-slash"></i> Verifier will only see</div>
+      <div id="previewText" style="font-size:0.875rem;color:#1a1a1a;font-weight:600;line-height:1.6;"></div>
+      <div style="font-size:0.72rem;color:rgba(0,0,0,0.45);margin-top:0.35rem;">All other credential details remain completely private.</div>
+    </div>
+
+    <div id="selectHint" style="text-align:center;color:rgba(0,0,0,0.45);font-size:0.8rem;padding:0.75rem 0;"><i class="fas fa-hand-pointer"></i> Select an option above first</div>
+
+    <div class="form-group" style="margin-top:0.5rem;">
+      <label>Proof valid for</label>
+      <select id="expirySelect" class="form-control">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+        <option value="365">1 year</option>
+      </select>
+    </div>
+
+    <button id="generateBtn" onclick="generateProof()" class="btn btn-amber"
+            style="width:100%;justify-content:center;padding:0.875rem;" disabled>
+      <i class="fas fa-shield-alt"></i> Generate ZKP Proof
+    </button>
+    <div id="genError" style="margin-top:0.6rem;display:none;" class="flash error"></div>
+  </div>
+
+  <!-- RIGHT: Proofs list -->
+  <div class="reveal">
+    <h3 style="font-family:'Fraunces',serif;font-size:1rem;margin-bottom:1rem;color:#1a1a1a;">
+      <i class="fas fa-key" style="color:#c47a1a;margin-right:0.5rem;"></i>Your Generated Proofs
+      <span style="font-size:0.75rem;font-weight:400;color:rgba(0,0,0,0.45);">({{ proofs|length }})</span>
+    </h3>
+
+    <div id="proofsContainer">
+    {% if proofs %}
+    {% for proof in proofs %}
+    <div class="proof-row">
+      <div>
+        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.25rem;">
+          {% if proof.claim_type=='is_verified' %}✅ Verified credential
+          {% elif proof.claim_type=='has_category' %}🏷️ Category: {{ proof.claim_value }}
+          {% elif proof.claim_type=='has_level' %}📊 Level: {{ proof.claim_value }}
+          {% elif proof.claim_type=='provider_is' %}🏢 Provider: {{ proof.claim_value }}
+          {% elif proof.claim_type=='issued_after' %}📅 Issued after: {{ proof.claim_value }}
+          {% endif %}
+        </div>
+        <div class="proof-token-big">{{ proof.proof_token }}</div>
+        <div style="font-size:0.7rem;color:rgba(0,0,0,0.45);margin-top:0.3rem;">Expires {{ proof.expires_at[:10] if proof.expires_at else 'Never' }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
+        <button onclick="copyToken('{{ proof.proof_token }}',this)" class="btn btn-ghost btn-sm">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+        <a href="/zkp/verify?token={{ proof.proof_token }}" target="_blank" class="btn btn-teal btn-sm">
+          <i class="fas fa-external-link-alt"></i> Test
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div id="emptyState" class="card empty-state" style="padding:2rem;">
+      <span class="ei" style="font-size:2rem;">🔐</span>
+      <h3 style="font-size:0.9rem;">No proofs yet</h3>
+      <p style="font-size:0.8rem;">Select a claim on the left and click Generate</p>
+    </div>
+    {% endif %}
+    </div>
+
+    <div class="card" style="margin-top:1rem;padding:1.25rem;background:rgba(240,164,48,0.04);border-color:rgba(240,164,48,0.15);">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c47a1a;margin-bottom:0.75rem;"><i class="fas fa-info-circle"></i> How It Works</div>
+      <div style="font-size:0.8rem;color:rgba(0,0,0,0.45);line-height:1.9;">
+        <div>① Select what you want to prove</div>
+        <div>② System creates a cryptographic proof</div>
+        <div>③ You get a <strong style="color:#1a1a1a;">16-character token</strong></div>
+        <div>④ Share it — verifier gets only <strong style="color:#1a1a1a;">YES/NO</strong></div>
+        <div>⑤ Your private details <strong style="color:#1a1a1a;">never revealed</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SUCCESS POPUP ── -->
+<div class="zkp-popup" id="successPopup">
+  <div class="zkp-popup-box">
+    <div style="font-size:2.5rem;margin-bottom:0.5rem;">🔐</div>
+    <h2 style="font-family:'Fraunces',serif;font-size:1.25rem;font-weight:800;color:#34d399;margin-bottom:0.3rem;">ZKP Proof Generated!</h2>
+    <p style="color:rgba(0,0,0,0.45);font-size:0.85rem;margin-bottom:0.5rem;">Your proof token is ready. Share it with anyone to prove your claim.</p>
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.3rem;">Your Proof Token</div>
+    <span class="token-display" id="popupToken"></span>
+    <div id="popupClaim" style="font-size:0.8rem;color:rgba(0,0,0,0.45);margin-bottom:1.25rem;"></div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;">
+      <button onclick="copyPopupToken()" class="btn btn-amber" style="flex:1;min-width:120px;justify-content:center;">
+        <i class="fas fa-copy"></i> Copy Token
+      </button>
+      <a id="testVerifyLink" href="#" target="_blank" class="btn btn-teal" style="flex:1;min-width:120px;justify-content:center;">
+        <i class="fas fa-external-link-alt"></i> Test Verify
+      </a>
+      <button onclick="closePopup()" class="btn btn-ghost" style="flex:1;min-width:120px;justify-content:center;">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedType = '', selectedValue = '', selectedPreview = '';
+
+function selectClaim(type, value, preview) {
+  document.querySelectorAll('.claim-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('opt_' + type).classList.add('selected');
+  selectedType    = type;
+  selectedValue   = value;
+  selectedPreview = preview;
+  document.getElementById('previewText').textContent = preview;
+  document.getElementById('claimPreview').classList.add('show');
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('selectHint').style.display = 'none';
+  document.getElementById('genError').style.display = 'none';
+}
+
+async function generateProof() {
+  if (!selectedType || !selectedValue) {
+    alert('Please click a claim option first.');
+    return;
+  }
+  const btn = document.getElementById('generateBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+  btn.disabled  = true;
+
+  try {
+    const expiry = document.getElementById('expirySelect').value;
+    const res = await fetch(location.pathname, {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({
+        claim_type:  selectedType,
+        claim_value: selectedValue,
+        expiry_days: expiry
+      })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      // Show success popup
+      document.getElementById('popupToken').textContent    = data.proof_token;
+      document.getElementById('popupClaim').textContent    = selectedPreview;
+      document.getElementById('testVerifyLink').href       = data.verify_url;
+      document.getElementById('successPopup').classList.add('show');
+
+      // Add new proof row to list without page reload
+      const container = document.getElementById('proofsContainer');
+      const empty     = document.getElementById('emptyState');
+      if (empty) empty.remove();
+
+      const claimLabels = {
+        'is_verified':  '✅ Verified credential',
+        'has_category': '🏷️ Category: ' + data.claim_value,
+        'has_level':    '📊 Level: '    + data.claim_value,
+        'provider_is':  '🏢 Provider: ' + data.claim_value,
+        'issued_after': '📅 Issued after: ' + data.claim_value,
+      };
+      const row = document.createElement('div');
+      row.className = 'proof-row';
+      row.style.animation = 'riseUp 0.4s cubic-bezier(0.25,0.46,0.45,0.94)';
+      row.innerHTML = `
+        <div>
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.25rem;">${claimLabels[data.claim_type] || data.claim_type}</div>
+          <div class="proof-token-big">${data.proof_token}</div>
+          <div style="font-size:0.7rem;color:rgba(0,0,0,0.45);margin-top:0.3rem;">Expires ${data.expires_at}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-end;">
+          <button onclick="copyToken('${data.proof_token}',this)" class="btn btn-ghost btn-sm"><i class="fas fa-copy"></i> Copy</button>
+          <a href="${data.verify_url}" target="_blank" class="btn btn-teal btn-sm"><i class="fas fa-external-link-alt"></i> Test</a>
+        </div>`;
+      container.insertBefore(row, container.firstChild);
+
+    } else {
+      const errEl = document.getElementById('genError');
+      errEl.textContent = data.error || 'Failed to generate proof.';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    const errEl = document.getElementById('genError');
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.style.display = 'block';
+  }
+
+  btn.innerHTML = '<i class="fas fa-shield-alt"></i> Generate ZKP Proof';
+  btn.disabled  = !selectedType;
+}
+
+function copyToken(token, btn) {
+  navigator.clipboard.writeText(token).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.style.color = '#34d399';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+let popupToken = '';
+function copyPopupToken() {
+  const token = document.getElementById('popupToken').textContent;
+  navigator.clipboard.writeText(token).then(() => {
+    const btn = document.querySelector('.zkp-popup-box .btn-amber');
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy Token'; }, 2000);
+  });
+}
+
+function closePopup() {
+  document.getElementById('successPopup').classList.remove('show');
+  // Reset form
+  document.querySelectorAll('.claim-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('claimPreview').classList.remove('show');
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('selectHint').style.display = 'block';
+  selectedType = ''; selectedValue = ''; selectedPreview = '';
+}
+
+// Close popup on backdrop click
+document.getElementById('successPopup').addEventListener('click', function(e) {
+  if (e.target === this) closePopup();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}{% block title %}MicroCred — Unified Skill Profiling{% endblock %}
+{% block extra_head %}<style>
+.hero { min-height: calc(100vh - var(--nav-h)); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:5rem 2rem; position:relative; }
+.hero-orb { position:absolute; border-radius:50%; pointer-events:none; opacity:0.6; }
+.orb1 { width:400px; height:400px; background:radial-gradient(circle,rgba(240,164,48,0.12),transparent 70%); top:-100px; left:-100px; animation-delay:0s; }
+.orb2 { width:300px; height:300px; background:radial-gradient(circle,rgba(45,212,191,0.08),transparent 70%); bottom:-50px; right:-50px; animation-delay:3s; }
+.orb3 { width:200px; height:200px; background:radial-gradient(circle,rgba(167,139,250,0.07),transparent 70%); top:30%; left:60%; animation-delay:6s; }
+.hero-eyebrow { display:inline-flex; align-items:center; gap:0.5rem; background:rgba(240,164,48,0.08); border:1px solid rgba(240,164,48,0.2); color:#c47a1a; padding:0.4rem 1.1rem; border-radius:20px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:2rem; animation:riseUp 0.6s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.hero h1 { font-family:'Fraunces',serif; font-size:clamp(2.8rem,8vw,6rem); font-weight:900; letter-spacing:-0.04em; line-height:1.0; max-width:900px; animation:riseUp 0.6s 0.1s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.hero h1 .glow { background:linear-gradient(135deg,#c47a1a,#ff8c42); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero p { color:rgba(0,0,0,0.45); font-size:1.1rem; max-width:500px; margin:1.75rem auto 2.75rem; animation:riseUp 0.6s 0.2s cubic-bezier(0.25,0.46,0.45,0.94) both; line-height:1.8; }
+.hero-cta { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; animation:riseUp 0.6s 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.hero-stats { display:flex; gap:3rem; margin-top:5rem; justify-content:center; flex-wrap:wrap; animation:riseUp 0.6s 0.45s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.hero-stat .num { font-family:'Fraunces',serif; font-size:2.2rem; font-weight:700; color:#c47a1a; }
+.hero-stat .lbl { font-size:0.78rem; color:rgba(0,0,0,0.45); text-transform:uppercase; letter-spacing:0.08em; margin-top:0.2rem; }
+.section-title { font-family:'Fraunces',serif; font-size:2.2rem; font-weight:700; letter-spacing:-0.02em; text-align:center; margin-bottom:0.75rem; }
+.section-sub { text-align:center; color:rgba(0,0,0,0.45); font-size:0.95rem; margin-bottom:3rem; }
+.feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; }
+@media(max-width:800px){.feat-grid{grid-template-columns:1fr;}}
+.feat-card { background:#ffffff; border:1px solid rgba(0,0,0,0.1); border-radius:16px; padding:1.75rem; transition:all 0.35s cubic-bezier(0.25,0.46,0.45,0.94); }
+.feat-card:hover { border-color:#c47a1a; transform:translateY(-4px); box-shadow:var(--card-glow-hover); }
+.feat-icon { width:44px; height:44px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:1.1rem; }
+.feat-card h3 { font-family:'Fraunces',serif; font-size:1.05rem; margin-bottom:0.4rem; font-weight:600; }
+.feat-card p { color:rgba(0,0,0,0.45); font-size:0.85rem; line-height:1.7; }
+.verify-strip { margin-top:5rem; background:#ffffff; border:1px solid rgba(0,0,0,0.1); border-radius:20px; padding:3rem; text-align:center; position:relative; overflow:hidden; }
+.verify-strip::before { content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%); width:300px; height:200px; background:radial-gradient(circle,rgba(240,164,48,0.25),transparent 70%); pointer-events:none; }
+.verify-input-row { display:flex; gap:0.75rem; max-width:560px; margin:0 auto; }
+.verify-input-row input { flex:1; padding:0.8rem 1.25rem; background:#f0f0f0; border:1px solid rgba(0,0,0,0.15); border-radius:10px; color:#1a1a1a; font-family:'DM Sans',sans-serif; font-size:0.9rem; transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94); }
+.verify-input-row input:focus { outline:none; border-color:#c47a1a; box-shadow:0 0 0 3px rgba(240,164,48,0.25); }
+.verify-input-row input::placeholder { color:rgba(0,0,0,0.2); }
+</style>{% endblock %}
+{% block content %}
+<div class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
+  <div class="hero-eyebrow"><i class="fas fa-certificate"></i> Verified Credential Platform</div>
+  <h1>Your Skills,<br><span class="glow">Verified & Trusted</span></h1>
+  <p>Aggregate micro-credentials from any platform into a single, cryptographically verified profile that employers trust.</p>
+  <div class="hero-cta">
+    <a href="/register" class="btn btn-amber btn-lg"><i class="fas fa-rocket"></i> Start for Free</a>
+    <a href="/login" class="btn btn-ghost btn-lg"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+  </div>
+  <div class="hero-stats">
+    {% for num,label in [('5+','Languages'),('SHA-256','Verification'),('3','User Roles'),('∞','Credentials')] %}
+    <div class="hero-stat"><div class="num">{{ num }}</div><div class="lbl">{{ label }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div style="margin-top:2rem;" class="reveal">
+  <p style="text-align:center;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#c47a1a;margin-bottom:0.75rem;">Platform Features</p>
+  <div class="section-title">Everything you need to shine</div>
+  <div class="section-sub">Built for learners, trusted by employers, managed by admins</div>
+  <div class="feat-grid stagger-children">
+    {% set feats = [
+      ("fa-layer-group","rgba(167,139,250,0.15)","#a78bfa","Unified Dashboard","All credentials from every provider, beautifully organized in one place."),
+      ("fa-fingerprint","rgba(45,212,191,0.15)","#2dd4bf","Hash Verification","SHA-256 cryptographic fingerprints make every credential tamper-proof."),
+      ("fa-briefcase","rgba(240,164,48,0.15)","#c47a1a","Employer Portal","Search, discover, and verify learners instantly — no middleman needed."),
+      ("fa-chart-pie","rgba(251,113,133,0.15)","#fb7185","Skill Analytics","Category and level charts give you a clear picture of your expertise."),
+      ("fa-route","rgba(52,211,153,0.15)","#34d399","Learning Pathways","Structure your credentials into career journeys with progress tracking."),
+      ("fa-globe","rgba(167,139,250,0.15)","#a78bfa","5 Languages","English, Hindi, Kannada, Tamil, Deutsch — fully localized interface.")
+    ] %}
+    {% for icon,bg,col,title,desc in feats %}
+    <div class="feat-card card-lift">
+      <div class="feat-icon" style="background:{{ bg }};color:{{ col }};"><i class="fas {{ icon }}"></i></div>
+      <h3>{{ title }}</h3><p>{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="verify-strip reveal" style="margin-top:5rem;">
+  <p style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#c47a1a;margin-bottom:0.75rem;">Public Verifier</p>
+  <div class="section-title">Verify Any Credential Instantly</div>
+  <p style="color:rgba(0,0,0,0.45);margin-bottom:2rem;font-size:0.9rem;">Paste a SHA-256 hash to confirm authenticity — no account needed</p>
+  <div class="verify-input-row">
+    <input type="text" id="hashIn" placeholder="Paste credential hash here…">
+    <button class="btn btn-amber" onclick="doVerify()"><i class="fas fa-search"></i> Verify</button>
+  </div>
+  <div id="verifyResult" style="margin-top:1.25rem;"></div>
+</div>
+
+<script>
+async function doVerify(){
+  const h = document.getElementById('hashIn').value.trim();
+  if(!h) return;
+  const res = await fetch('/verify_hash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hash:h})});
+  const d = await res.json();
+  const el = document.getElementById('verifyResult');
+  if(d.found) {
+    el.innerHTML = `<div class="flash success" style="max-width:540px;margin:0 auto;justify-content:center;"><i class="fas fa-check-circle"></i> <strong>${d.title}</strong> — ${d.owner} via ${d.provider} <span class="badge badge-${d.status}" style="margin-left:0.5rem;">${d.status}</span></div>`;
+  } else {
+    el.innerHTML = '<div class="flash error" style="max-width:540px;margin:0 auto;justify-content:center;"><i class="fas fa-times-circle"></i> No credential found with this hash.</div>';
+  }
+}
+document.getElementById('hashIn').addEventListener('keydown', e => { if(e.key==='Enter') doVerify(); });
+</script>
+{% endblock %}

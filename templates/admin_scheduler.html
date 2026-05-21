@@ -1,0 +1,130 @@
+{% extends "base.html" %}{% block title %}Automation Jobs{% endblock %}
+{% block extra_head %}<style>
+.job-card{background:#ffffff;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);}
+.job-card:hover{border-color:rgba(240,164,48,0.25);}
+.job-info{flex:1;}
+.job-name{font-weight:700;font-size:0.9rem;color:#1a1a1a;margin-bottom:0.2rem;}
+.job-schedule{font-size:0.75rem;color:rgba(0,0,0,0.45);display:flex;align-items:center;gap:0.4rem;}
+.job-result{margin-top:0.5rem;font-size:0.78rem;display:none;}
+.status-badge{display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.75rem;border-radius:20px;font-size:0.72rem;font-weight:700;}
+.status-active{background:rgba(52,211,153,0.1);color:#34d399;border:1px solid rgba(52,211,153,0.2);}
+.status-disabled{background:rgba(248,246,242,0.06);color:rgba(0,0,0,0.45);border:1px solid rgba(0,0,0,0.1);}
+.run-dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 2s infinite;}
+</style>{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;" class="reveal">
+  <div>
+    <a href="/admin" class="btn btn-ghost btn-sm" style="margin-bottom:0.75rem;"><i class="fas fa-arrow-left"></i> Back to Admin</a>
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c47a1a;margin-bottom:0.3rem;"><i class="fas fa-robot"></i> Automation</div>
+    <h1 style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;color:#1a1a1a;">Scheduled Jobs</h1>
+    <p style="color:rgba(0,0,0,0.45);font-size:0.875rem;margin-top:0.3rem;">All automation tasks running in the background. Click Run Now to trigger any job manually.</p>
+  </div>
+  <div id="schedulerStatus" style="display:flex;align-items:center;gap:0.5rem;background:#f0f0f0;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:0.6rem 1rem;font-size:0.82rem;color:rgba(0,0,0,0.45);">
+    <i class="fas fa-spinner fa-spin"></i> Checking…
+  </div>
+</div>
+
+<div id="jobsList" class="reveal">
+  <!-- Jobs loaded via API -->
+  <div style="text-align:center;padding:3rem;color:rgba(0,0,0,0.45);"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+</div>
+
+<!-- Job descriptions -->
+<div class="card reveal" style="margin-top:1.5rem;">
+  <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:1rem;"><i class="fas fa-info-circle"></i> What Each Job Does</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+    {% for icon,name,desc in [
+      ('clock','Expiry Reminders','Sends email + notification to learners whose verified credentials expire within 30 days'),
+      ('robot','Fraud Scan','Runs fraud detection on all pending credentials and flags high-risk ones to admins'),
+      ('broom','OTP Cleanup','Removes used and expired OTP codes from the database every hour'),
+      ('shield-alt','ZKP Cleanup','Deletes expired Zero-Knowledge Proof tokens from the database'),
+      ('chart-bar','Weekly Report','Sends a summary email to all admins — new users, credentials, fraud flags'),
+      ('bell','Inactive Alerts','Reminds learners who have unverified credentials and have been inactive'),
+      ('search','Duplicate Scan','Scans all accounts nightly for suspicious duplicate registrations'),
+    ] %}
+    <div style="display:flex;gap:0.75rem;padding:0.75rem;background:#f0f0f0;border-radius:10px;">
+      <i class="fas fa-{{ icon }}" style="color:#c47a1a;font-size:1rem;margin-top:2px;flex-shrink:0;"></i>
+      <div>
+        <div style="font-weight:700;font-size:0.82rem;color:#1a1a1a;margin-bottom:0.2rem;">{{ name }}</div>
+        <div style="font-size:0.75rem;color:rgba(0,0,0,0.45);line-height:1.5;">{{ desc }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+const jobIcons = {
+  'expiry_check':    'clock',
+  'fraud_scan':      'robot',
+  'otp_cleanup':     'broom',
+  'zkp_cleanup':     'shield-alt',
+  'weekly_report':   'chart-bar',
+  'inactive_alerts': 'bell',
+  'duplicate_scan':  'search',
+};
+
+async function loadStatus() {
+  const res  = await fetch('/api/scheduler/status');
+  const data = await res.json();
+  const statusEl = document.getElementById('schedulerStatus');
+
+  if (!data.available) {
+    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#fb7185;"></i> APScheduler not installed — run: <code style="background:#f0f0f0;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.78rem;">pip install apscheduler</code>';
+    document.getElementById('jobsList').innerHTML = '<div class="card empty-state"><span class="ei">⚙️</span><h3>Scheduler not available</h3><p>Install APScheduler to enable automation</p></div>';
+    return;
+  }
+
+  statusEl.innerHTML = '<span class="run-dot"></span> Scheduler running · ' + data.jobs.length + ' jobs active';
+  statusEl.style.color = '#34d399';
+
+  const html = data.jobs.map(job => `
+    <div class="job-card" id="job-${job.id}">
+      <div class="job-info">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem;">
+          <div style="width:34px;height:34px;background:rgba(240,164,48,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#c47a1a;flex-shrink:0;">
+            <i class="fas fa-${jobIcons[job.id] || 'cog'}"></i>
+          </div>
+          <div class="job-name">${job.name}</div>
+          <span class="status-badge status-active"><span class="run-dot"></span> Active</span>
+        </div>
+        <div class="job-schedule"><i class="fas fa-calendar-alt" style="font-size:0.65rem;"></i> ${job.schedule}</div>
+        <div class="job-result" id="result-${job.id}"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="runJob('${job.id}', '${job.name}')" id="btn-${job.id}">
+        <i class="fas fa-play"></i> Run Now
+      </button>
+    </div>
+  `).join('');
+
+  document.getElementById('jobsList').innerHTML = html;
+}
+
+async function runJob(id, name) {
+  const btn    = document.getElementById('btn-' + id);
+  const result = document.getElementById('result-' + id);
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
+  btn.disabled  = true;
+  result.style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/scheduler/run/' + id, {method: 'POST'});
+    const data = await res.json();
+    result.style.display = 'block';
+    if (data.ok) {
+      result.innerHTML = '<span style="color:#34d399;"><i class="fas fa-check-circle"></i> ' + data.message + '</span>';
+    } else {
+      result.innerHTML = '<span style="color:#fb7185;"><i class="fas fa-times-circle"></i> ' + (data.error || 'Failed') + '</span>';
+    }
+  } catch(e) {
+    result.style.display = 'block';
+    result.innerHTML = '<span style="color:#fb7185;">Network error</span>';
+  }
+
+  btn.innerHTML = '<i class="fas fa-play"></i> Run Now';
+  btn.disabled  = false;
+}
+
+loadStatus();
+</script>
+{% endblock %}

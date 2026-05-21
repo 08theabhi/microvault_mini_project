@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% block title %}Learning Pathways{% endblock %}
+{% block extra_head %}<style>
+.pw-layout{display:grid;grid-template-columns:1fr 380px;gap:2rem;}
+@media(max-width:1000px){.pw-layout{grid-template-columns:1fr;}}
+.pw-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.1rem;position:relative;border-left:4px solid #a78bfa;}
+.step-item{display:flex;gap:0.75rem;align-items:flex-start;padding-bottom:0.75rem;}
+.step-dot{width:26px;height:26px;border-radius:50%;background:#a78bfa;color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;margin-top:2px;}
+.ring-wrap{display:flex;align-items:center;gap:1rem;padding:0.875rem 1rem;background:var(--bg3);border-radius:10px;margin-top:1rem;}
+.ring{width:50px;height:50px;position:relative;}
+.ring svg{transform:rotate(-90deg);}
+.ring-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Clash Display',sans-serif;font-size:0.8rem;font-weight:800;}
+.step-input-row{display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;}
+.step-num{width:26px;height:26px;border-radius:50%;background:#a78bfa;color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;flex-shrink:0;}
+</style>{% endblock %}
+{% block content %}
+<div class="page-header slide-up"><h1><i class="fas fa-route" style="color:#a78bfa;margin-right:0.6rem;"></i>Learning Pathways</h1><p>Map your credentials to structured skill journeys</p></div>
+<div class="pw-layout">
+  <div>
+    {% if pathways %}{% for p in pathways %}
+    {% set steps = p.steps|from_json %}
+    <div class="pw-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+        <div><h2 style="font-size:1.05rem;font-weight:700;">{{ p.title }}</h2>{% if p.description %}<p style="color:var(--muted);font-size:0.82rem;margin-top:0.2rem;">{{ p.description }}</p>{% endif %}</div>
+        <form method="POST" action="/pathways/delete/{{ p.pathway_id }}" onsubmit="return confirm('Delete?')"><button type="submit" class="btn btn-sm" style="background:#fee2e2;color:var(--danger);border:1px solid #fca5a5;"><i class="fas fa-trash"></i></button></form>
+      </div>
+      {% if steps %}<div>{% for s in steps %}<div class="step-item"><div class="step-dot">{{ loop.index }}</div><div style="font-size:0.875rem;line-height:1.5;">{{ s }}</div></div>{% endfor %}</div>
+      {% set pct = ((credentials|selectattr('title','in',steps)|list|length / steps|length)*100)|int %}
+      <div class="ring-wrap">
+        <div class="ring"><svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="25" r="18" fill="none" stroke="var(--border)" stroke-width="5"/><circle cx="25" cy="25" r="18" fill="none" stroke="#a78bfa" stroke-width="5" stroke-dasharray="{{ (2*3.14159*18)|round(1) }}" stroke-dashoffset="{{ ((1-pct/100)*2*3.14159*18)|round(1) }}" stroke-linecap="round"/></svg><div class="ring-txt">{{ pct }}%</div></div>
+        <div><div style="font-weight:700;font-size:0.875rem;">{{ pct }}% matched</div><div style="font-size:0.78rem;color:var(--muted);">{{ credentials|selectattr('title','in',steps)|list|length }} of {{ steps|length }} credentials in your profile</div></div>
+      </div>{% endif %}
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.75rem;">Created {{ p.created_at[:10] }}</div>
+    </div>
+    {% endfor %}{% else %}
+    <div class="card empty"><div class="empty-icon">🗺️</div><h3>No pathways yet</h3><p>Create your first learning pathway to track skill progression</p></div>
+    {% endif %}
+  </div>
+  <div>
+    <div class="card" style="position:sticky;top:calc(var(--nav-h)+1rem);">
+      <h3 style="font-size:0.95rem;margin-bottom:1.25rem;"><i class="fas fa-plus-circle" style="color:#a78bfa;margin-right:0.5rem;"></i>Create Pathway</h3>
+      <form method="POST" action="/pathways/create">
+        <div class="form-group"><label>Title *</label><input type="text" name="title" class="form-control" placeholder="e.g. Full-Stack Developer Path" required></div>
+        <div class="form-group"><label>Description</label><textarea name="description" class="form-control" rows="2" placeholder="What is this pathway about?"></textarea></div>
+        <div class="form-group"><label>Steps</label>
+          <div id="stepsBuilder"><div class="step-input-row"><div class="step-num">1</div><input type="text" name="steps[]" class="form-control" placeholder="First learning step" required><button type="button" class="btn btn-sm btn-icon" onclick="rmStep(this)" style="background:#fee2e2;color:var(--danger);border:1px solid #fca5a5;flex-shrink:0;"><i class="fas fa-times"></i></button></div></div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addStep()" style="margin-top:0.5rem;width:100%;justify-content:center;"><i class="fas fa-plus"></i> Add Step</button>
+        </div>
+        <button type="submit" class="btn btn-violet" style="width:100%;justify-content:center;"><i class="fas fa-save"></i> Create Pathway</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+let sc=1;
+function addStep(){sc++;const b=document.getElementById('stepsBuilder');const d=document.createElement('div');d.className='step-input-row';d.innerHTML=`<div class="step-num">${sc}</div><input type="text" name="steps[]" class="form-control" placeholder="Step ${sc}"><button type="button" class="btn btn-sm btn-icon" onclick="rmStep(this)" style="background:#fee2e2;color:var(--danger);border:1px solid #fca5a5;flex-shrink:0;"><i class="fas fa-times"></i></button>`;b.appendChild(d);}
+function rmStep(btn){const rows=document.querySelectorAll('.step-input-row');if(rows.length<=1)return;btn.closest('.step-input-row').remove();document.querySelectorAll('.step-num').forEach((n,i)=>n.textContent=i+1);sc=rows.length-1;}
+</script>{% endblock %}

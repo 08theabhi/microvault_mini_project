@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Helpline Management - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-helpline-container">
+  <h1>Helpline Support Tickets</h1>
+
+  <div class="filters">
+    <select id="statusFilter">
+      <option value="">All Status</option>
+      <option value="open">Open</option>
+      <option value="resolved">Resolved</option>
+    </select>
+    <select id="priorityFilter">
+      <option value="">All Priority</option>
+      <option value="high">High</option>
+      <option value="normal">Normal</option>
+      <option value="low">Low</option>
+    </select>
+  </div>
+
+  <div class="tickets-grid">
+    {% if tickets %}
+      {% for ticket in tickets %}
+      <div class="ticket-card" data-status="{{ ticket.status }}" data-priority="{{ ticket.priority }}">
+        <div class="ticket-header">
+          <h3>#{{ ticket.ticket_id }} - {{ ticket.subject }}</h3>
+          <div class="badges">
+            <span class="status-badge {{ ticket.status }}">{{ ticket.status|title }}</span>
+            <span class="priority-badge {{ ticket.priority }}">{{ ticket.priority|title }}</span>
+          </div>
+        </div>
+
+        <div class="user-info">
+          <strong>{{ ticket.name }}</strong>
+          <small>{{ ticket.email }}</small>
+        </div>
+
+        <div class="ticket-body">
+          <p><strong>Category:</strong> {{ ticket.category|title }}</p>
+          <p><strong>Message:</strong></p>
+          <p class="message">{{ ticket.message }}</p>
+        </div>
+
+        {% if ticket.admin_response %}
+        <div class="response">
+          <p><strong>Admin Response:</strong></p>
+          <p>{{ ticket.admin_response }}</p>
+        </div>
+        {% else %}
+        <div class="response-form" id="form-{{ ticket.ticket_id }}" style="display: none;">
+          <textarea placeholder="Type your response..." id="response-{{ ticket.ticket_id }}"></textarea>
+          <div class="form-actions">
+            <button onclick="submitResponse({{ ticket.ticket_id }})">Send Response</button>
+            <button onclick="cancelResponse({{ ticket.ticket_id }})">Cancel</button>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="ticket-footer">
+          <small>{{ ticket.created_at[:10] }}</small>
+          {% if ticket.status == 'open' %}
+          <button class="btn-respond" onclick="showResponseForm({{ ticket.ticket_id }})">
+            <i class="fas fa-reply"></i> Respond
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+        <p>No support tickets</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.admin-helpline-container {
+  padding: 2rem;
+}
+
+.admin-helpline-container h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.filters select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.ticket-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.ticket-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(196, 122, 26, 0.1);
+}
+
+.ticket-header {
+  margin-bottom: 1rem;
+}
+
+.ticket-header h3 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.status-badge, .priority-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.open {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.resolved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.priority-badge.high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.priority-badge.normal {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.priority-badge.low {
+  background: #e0e7ff;
+  color: #312e81;
+}
+
+.user-info {
+  background: var(--bg-primary);
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.user-info strong {
+  display: block;
+  color: var(--text-primary);
+}
+
+.user-info small {
+  color: var(--text-secondary);
+}
+
+.ticket-body {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ticket-body p {
+  color: var(--text-primary);
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.message {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  padding: 0.75rem;
+  border-radius: 4px;
+}
+
+.response {
+  background: #dcfce7;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #10b981;
+}
+
+.response p {
+  color: #166534;
+  margin: 0.5rem 0;
+}
+
+.response-form {
+  background: var(--bg-primary);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.response-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.form-actions button {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.form-actions button:hover {
+  background: #a65c1a;
+}
+
+.ticket-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-respond {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: var(--accent);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.btn-respond:hover {
+  background: #a65c1a;
+}
+
+@media (max-width: 768px) {
+  .tickets-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+function showResponseForm(ticketId) {
+  document.getElementById(`form-${ticketId}`).style.display = 'block';
+}
+
+function cancelResponse(ticketId) {
+  document.getElementById(`form-${ticketId}`).style.display = 'none';
+}
+
+function submitResponse(ticketId) {
+  const response = document.getElementById(`response-${ticketId}`).value.trim();
+  if (!response) {
+    alert('Please enter a response');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('response', response);
+
+  fetch(`/admin/helpline/${ticketId}/respond`, {
+    method: 'POST',
+    body: formData
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      location.reload();
+    } else {
+      alert(d.error);
+    }
+  });
+}
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+  filterTickets();
+});
+
+document.getElementById('priorityFilter').addEventListener('change', function() {
+  filterTickets();
+});
+
+function filterTickets() {
+  const status = document.getElementById('statusFilter').value;
+  const priority = document.getElementById('priorityFilter').value;
+  const cards = document.querySelectorAll('.ticket-card');
+
+  cards.forEach(card => {
+    let show = true;
+    if (status && card.dataset.status !== status) show = false;
+    if (priority && card.dataset.priority !== priority) show = false;
+    card.style.display = show ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block title %}Review: {{ credential.title }}{% endblock %}
+{% block extra_head %}
+<style>
+.review-layout { display: grid; grid-template-columns: 1fr 420px; gap: 2rem; }
+@media (max-width: 1000px) { .review-layout { grid-template-columns: 1fr; } }
+
+.doc-viewer {
+  background: #f0ece4;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+}
+.doc-viewer-header {
+  background: var(--ink);
+  padding: 0.875rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.doc-viewer-header span { color: #aaa; font-size: 0.82rem; }
+.doc-viewer-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.doc-viewer-body img { max-width: 100%; max-height: 600px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+.doc-viewer-body iframe { width: 100%; height: 600px; border: none; border-radius: 8px; }
+.no-doc { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.no-doc i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; display: block; }
+
+.review-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.info-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; }
+.info-card h3 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 1rem; }
+
+.field-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.field-row:last-child { border-bottom: none; }
+.field-row .label { color: var(--muted); }
+.field-row .value { font-weight: 600; text-align: right; max-width: 60%; }
+
+.checklist { display: flex; flex-direction: column; gap: 0.5rem; }
+.check-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 8px; background: var(--cream); font-size: 0.85rem; cursor: pointer; transition: background 0.2s; }
+.check-item:hover { background: #ede8de; }
+.check-item input[type=checkbox] { width: 16px; height: 16px; accent-color: #2dd4bf; cursor: pointer; }
+.check-item.checked { background: #dcfce7; }
+
+.action-bar { background: var(--ink); border-radius: 16px; padding: 1.5rem; }
+.action-bar h3 { color: var(--cream); font-size: 0.9rem; margin-bottom: 1rem; }
+.reject-reason { width: 100%; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); color: var(--cream); border-radius: 8px; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; resize: none; margin-bottom: 0.75rem; display: none; }
+.reject-reason::placeholder { color: #555; }
+.reject-reason:focus { outline: none; border-color: var(--danger); }
+
+.status-banner {
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+.status-banner.verified { background: #dcfce7; color: var(--success); }
+.status-banner.rejected { background: #fee2e2; color: var(--danger); }
+.status-banner.pending { background: #fef3c7; color: var(--warn); }
+</style>
+{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+  <a href="/admin" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to Admin</a>
+  <h1 style="font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;">
+    <i class="fas fa-search" style="color:var(--gold);margin-right:0.5rem;"></i>Credential Review
+  </h1>
+  <span class="status-banner {{ credential.status }}" style="margin-left:auto;padding:0.4rem 1rem;border-radius:20px;">
+    {% if credential.status == 'verified' %}<i class="fas fa-check-circle"></i> Verified
+    {% elif credential.status == 'rejected' %}<i class="fas fa-times-circle"></i> Rejected
+    {% else %}<i class="fas fa-clock"></i> Pending Review{% endif %}
+  </span>
+</div>
+
+<div class="review-layout">
+
+  <!-- LEFT: Document Viewer -->
+  <div>
+    <div class="doc-viewer">
+      <div class="doc-viewer-header">
+        <span><i class="fas fa-file-alt" style="margin-right:0.5rem;color:var(--gold);"></i>Uploaded Certificate</span>
+        {% if credential.file_path %}
+        <a href="/static/uploads/{{ credential.file_path }}" target="_blank" class="btn btn-gold btn-sm">
+          <i class="fas fa-external-link-alt"></i> Open Full Size
+        </a>
+        {% endif %}
+      </div>
+      <div class="doc-viewer-body">
+        {% if credential.file_path %}
+          {% set ext = credential.file_path.rsplit('.',1)[-1].lower() %}
+          {% if ext == 'pdf' %}
+            <iframe src="/static/uploads/{{ credential.file_path }}"></iframe>
+          {% elif ext in ['png','jpg','jpeg'] %}
+            <img src="/static/uploads/{{ credential.file_path }}" alt="Certificate">
+          {% else %}
+            <div class="no-doc">
+              <i class="fas fa-file"></i>
+              <p>File type cannot be previewed.</p>
+              <a href="/static/uploads/{{ credential.file_path }}" target="_blank" class="btn btn-outline" style="margin-top:1rem;">Download File</a>
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="no-doc">
+            <i class="fas fa-image"></i>
+            <p style="font-weight:600;color:var(--ink);margin-bottom:0.5rem;">No document uploaded</p>
+            <p style="font-size:0.85rem;">The learner did not attach a certificate file.<br>You can still verify based on other evidence.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Review Panel -->
+  <div class="review-panel">
+
+    <!-- Learner Info -->
+    <div class="info-card">
+      <h3><i class="fas fa-user" style="margin-right:0.4rem;"></i>Submitted By</h3>
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--gold);flex-shrink:0;">
+          {{ credential.owner_name[0]|upper }}
+        </div>
+        <div>
+          <div style="font-weight:700;">{{ credential.owner_name }}</div>
+          <div style="font-size:0.8rem;color:var(--muted);">{{ credential.owner_email }}</div>
+          {% if credential.headline %}<div style="font-size:0.78rem;color:#2dd4bf;margin-top:0.2rem;">{{ credential.headline }}</div>{% endif %}
+        </div>
+      </div>
+      <a href="/learner/{{ credential.user_id }}" target="_blank" class="btn btn-outline btn-sm">
+        <i class="fas fa-id-card"></i> View Full Profile
+      </a>
+    </div>
+
+    <!-- Credential Details -->
+    <div class="info-card">
+      <h3><i class="fas fa-certificate" style="margin-right:0.4rem;"></i>Claimed Details</h3>
+      <div class="field-row"><span class="label">Title</span><span class="value">{{ credential.title }}</span></div>
+      <div class="field-row"><span class="label">Issuing Organization</span><span class="value">{{ credential.provider }}</span></div>
+      <div class="field-row"><span class="label">Issue Date</span><span class="value">{{ credential.issue_date }}</span></div>
+      <div class="field-row"><span class="label">Skill Category</span><span class="value">{{ credential.skill_category }}</span></div>
+      <div class="field-row"><span class="label">Level</span><span class="value">{{ credential.level }}</span></div>
+      <div class="field-row"><span class="label">Submitted On</span><span class="value">{{ credential.created_at[:10] }}</span></div>
+      {% if credential.description %}
+      <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.4rem;">Description</div>
+        <p style="font-size:0.85rem;line-height:1.6;">{{ credential.description }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── AUTOMATED FRAUD DETECTION PANEL ── -->
+    {% if fraud_report and not fraud_report.get('error') %}
+    <div class="info-card" style="border-color:{% if fraud_report.risk_level=='critical' %}rgba(251,113,133,0.4){% elif fraud_report.risk_level=='high' %}rgba(251,113,133,0.25){% elif fraud_report.risk_level=='medium' %}rgba(240,164,48,0.3){% else %}rgba(52,211,153,0.25){% endif %};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+        <h3 style="margin-bottom:0;"><i class="fas fa-robot" style="margin-right:0.4rem;color:#2dd4bf;"></i>AI Fraud Detection</h3>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <!-- Risk Score -->
+          <div style="text-align:center;">
+            <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;line-height:1;
+              color:{% if fraud_report.risk_level=='critical' %}#fb7185{% elif fraud_report.risk_level=='high' %}#fb7185{% elif fraud_report.risk_level=='medium' %}#c47a1a{% else %}#34d399{% endif %};">
+              {{ fraud_report.risk_score }}
+            </div>
+            <div style="font-size:0.65rem;color:rgba(0,0,0,0.45);text-transform:uppercase;letter-spacing:0.06em;">Risk Score</div>
+          </div>
+          <!-- Risk Badge -->
+          <span style="padding:0.3rem 0.875rem;border-radius:20px;font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
+            {% if fraud_report.risk_level=='critical' %}background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3);
+            {% elif fraud_report.risk_level=='high' %}background:rgba(251,113,133,0.1);color:#fb7185;border:1px solid rgba(251,113,133,0.2);
+            {% elif fraud_report.risk_level=='medium' %}background:rgba(240,164,48,0.12);color:#c47a1a;border:1px solid rgba(240,164,48,0.25);
+            {% else %}background:rgba(52,211,153,0.1);color:#34d399;border:1px solid rgba(52,211,153,0.2);{% endif %}">
+            {{ fraud_report.risk_level|upper }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div style="background:{% if fraud_report.risk_level=='critical' %}rgba(251,113,133,0.07){% elif fraud_report.risk_level=='medium' %}rgba(240,164,48,0.07){% else %}rgba(52,211,153,0.07){% endif %};
+                  border-radius:10px;padding:0.875rem 1rem;margin-bottom:1rem;font-size:0.85rem;
+                  color:#1a1a1a;line-height:1.6;">
+        <i class="fas fa-{% if fraud_report.risk_level=='critical' or fraud_report.risk_level=='high' %}exclamation-triangle{% elif fraud_report.risk_level=='medium' %}exclamation-circle{% else %}check-circle{% endif %}"
+           style="margin-right:0.4rem;color:{% if fraud_report.risk_level=='critical' %}#fb7185{% elif fraud_report.risk_level=='high' %}#fb7185{% elif fraud_report.risk_level=='medium' %}#c47a1a{% else %}#34d399{% endif %};"></i>
+        {{ fraud_report.summary }}
+        <strong style="color:{% if fraud_report.recommendation=='approve' %}#34d399{% elif fraud_report.recommendation=='reject' %}#fb7185{% else %}#c47a1a{% endif %};">
+          Recommendation: {{ fraud_report.recommendation|upper }}
+        </strong>
+      </div>
+
+      <!-- Score bar -->
+      <div style="margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(0,0,0,0.45);margin-bottom:0.3rem;">
+          <span>0 — Clean</span>
+          <span>{{ fraud_report.passed_checks }}/{{ fraud_report.total_checks }} checks passed</span>
+          <span>100 — Fraud</span>
+        </div>
+        <div style="height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:{{ fraud_report.risk_score }}%;border-radius:4px;transition:width 1s;
+            background:{% if fraud_report.risk_score<=20 %}#34d399{% elif fraud_report.risk_score<=45 %}#c47a1a{% elif fraud_report.risk_score<=70 %}#fb923c{% else %}#fb7185{% endif %};"></div>
+        </div>
+      </div>
+
+      <!-- Flags (issues found) -->
+      {% if fraud_report.flags %}
+      <div style="margin-bottom:0.875rem;">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#fb7185;margin-bottom:0.5rem;">
+          <i class="fas fa-flag"></i> Issues Found ({{ fraud_report.flags|length }})
+        </div>
+        {% for flag in fraud_report.flags %}
+        <div style="display:flex;gap:0.6rem;align-items:flex-start;padding:0.5rem 0.75rem;background:rgba(251,113,133,0.06);border:1px solid rgba(251,113,133,0.15);border-radius:8px;margin-bottom:0.4rem;font-size:0.8rem;">
+          <i class="fas fa-exclamation-triangle" style="color:#fb7185;margin-top:2px;flex-shrink:0;font-size:0.75rem;"></i>
+          <div>
+            <div style="font-weight:700;color:#1a1a1a;">{{ flag.check }}</div>
+            <div style="color:rgba(0,0,0,0.45);">{{ flag.detail }}</div>
+          </div>
+          <span style="margin-left:auto;font-size:0.68rem;font-weight:700;color:#fb7185;flex-shrink:0;">+{{ flag.weight }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- All checks (collapsible) -->
+      <div>
+        <button onclick="toggleChecks()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:rgba(0,0,0,0.45);font-family:'DM Sans',sans-serif;padding:0;display:flex;align-items:center;gap:0.4rem;">
+          <i class="fas fa-chevron-down" id="checksIcon"></i> Show all {{ fraud_report.total_checks }} checks
+        </button>
+        <div id="allChecks" style="display:none;margin-top:0.75rem;">
+          {% for check in fraud_report.checks %}
+          <div style="display:flex;gap:0.5rem;align-items:center;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.1);font-size:0.78rem;">
+            <i class="fas fa-{{ 'check-circle' if check.passed else 'times-circle' }}"
+               style="color:{{ '#34d399' if check.passed else '#fb7185' }};flex-shrink:0;"></i>
+            <span style="color:{{ '#1a1a1a' if not check.passed else 'rgba(0,0,0,0.45)' }};font-weight:{{ '600' if not check.passed else '400' }};">{{ check.name }}</span>
+            {% if check.detail %}<span style="color:rgba(0,0,0,0.45);font-size:0.72rem;margin-left:auto;text-align:right;max-width:55%;">{{ check.detail }}</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Re-run button -->
+      <button onclick="rerunFraudCheck('{{ credential.credential_id }}')"
+              style="margin-top:1rem;width:100%;justify-content:center;" class="btn btn-ghost btn-sm" id="rerunBtn">
+        <i class="fas fa-sync-alt"></i> Re-run Fraud Check
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- Verification Checklist -->
+    {% if credential.status == 'unverified' %}
+    <div class="info-card">
+      <h3><i class="fas fa-tasks" style="margin-right:0.4rem;"></i>Manual Review Checklist</h3>
+      <div class="checklist" id="checklist">
+        <label class="check-item" id="chk1">
+          <input type="checkbox" onchange="updateChecklist()">
+          <span>Certificate document is attached and visible</span>
+        </label>
+        <label class="check-item" id="chk2">
+          <input type="checkbox" onchange="updateChecklist()">
+          <span>Name on certificate matches learner's name</span>
+        </label>
+        <label class="check-item" id="chk3">
+          <input type="checkbox" onchange="updateChecklist()">
+          <span>Issuing organization matches "{{ credential.provider }}"</span>
+        </label>
+        <label class="check-item" id="chk4">
+          <input type="checkbox" onchange="updateChecklist()">
+          <span>Issue date matches "{{ credential.issue_date }}"</span>
+        </label>
+        <label class="check-item" id="chk5">
+          <input type="checkbox" onchange="updateChecklist()">
+          <span>Certificate looks genuine (no obvious edits)</span>
+        </label>
+      </div>
+      <div id="checklistProgress" style="margin-top:0.75rem;font-size:0.82rem;color:var(--muted);">0 of 5 checks completed</div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <h3><i class="fas fa-gavel" style="color:var(--gold);margin-right:0.5rem;"></i>Admin Decision</h3>
+      <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
+        <button class="btn btn-teal" style="flex:1;justify-content:center;" id="verifyBtn" onclick="doVerify('{{ credential.credential_id }}')">
+          <i class="fas fa-check-circle"></i> Verify & Approve
+        </button>
+        <button class="btn" style="flex:1;justify-content:center;background:#dc2626;color:white;" onclick="showReject()">
+          <i class="fas fa-times-circle"></i> Reject
+        </button>
+      </div>
+      <textarea class="reject-reason" id="rejectReason" rows="3" placeholder="Reason for rejection (will be sent to learner)…"></textarea>
+      <button class="btn btn-danger" style="width:100%;justify-content:center;display:none;" id="confirmRejectBtn" onclick="doReject('{{ credential.credential_id }}')">
+        <i class="fas fa-times"></i> Confirm Rejection
+      </button>
+      <div id="actionMsg" style="margin-top:0.75rem;"></div>
+    </div>
+
+    {% else %}
+    <!-- Already decided -->
+    <div class="info-card">
+      <h3><i class="fas fa-history" style="margin-right:0.4rem;"></i>Decision Record</h3>
+      {% if verification %}
+      <div class="field-row"><span class="label">Decision</span>
+        <span class="value">
+          {% if credential.status=='verified' %}<span style="color:var(--success);font-weight:700;"><i class="fas fa-check-circle"></i> Approved</span>
+          {% else %}<span style="color:var(--danger);font-weight:700;"><i class="fas fa-times-circle"></i> Rejected</span>{% endif %}
+        </span>
+      </div>
+      <div class="field-row"><span class="label">Decided On</span><span class="value">{{ verification.verified_at[:10] if verification.verified_at else 'N/A' }}</span></div>
+      {% endif %}
+      <div style="margin-top:1rem;">
+        <a href="/admin" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back to All Credentials</a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+function updateChecklist() {
+  const boxes = document.querySelectorAll('#checklist input[type=checkbox]');
+  let checked = 0;
+  boxes.forEach((b,i) => {
+    const label = b.closest('.check-item');
+    if (b.checked) { label.classList.add('checked'); checked++; }
+    else { label.classList.remove('checked'); }
+  });
+  document.getElementById('checklistProgress').textContent = checked + ' of ' + boxes.length + ' checks completed';
+  document.getElementById('verifyBtn').style.opacity = checked >= 3 ? '1' : '0.5';
+}
+
+function showReject() {
+  const ta = document.getElementById('rejectReason');
+  const btn = document.getElementById('confirmRejectBtn');
+  ta.style.display = ta.style.display === 'none' ? 'block' : 'none';
+  btn.style.display = btn.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function doVerify(id) {
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+  try {
+    const res = await fetch('/verify/' + id, { method: 'POST', headers: {'Content-Type':'application/json'} });
+    const data = await res.json();
+    if (data.status === 'verified') {
+      document.getElementById('actionMsg').innerHTML = '<div class="flash success" style="margin-top:0;"><i class="fas fa-check-circle"></i> Credential verified successfully! Learner has been notified.</div>';
+      setTimeout(() => window.location.href = '/admin', 1800);
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Verify & Approve';
+    document.getElementById('actionMsg').innerHTML = '<div class="flash error" style="margin-top:0;">Error: ' + e.message + '</div>';
+  }
+}
+
+async function doReject(id) {
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { alert('Please enter a reason for rejection.'); return; }
+  const btn = document.getElementById('confirmRejectBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rejecting...';
+  try {
+    const res = await fetch('/admin/reject/' + id, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({reason})
+    });
+    const data = await res.json();
+    if (data.status === 'rejected') {
+      document.getElementById('actionMsg').innerHTML = '<div class="flash error" style="margin-top:0;background:#fee2e2;color:#dc2626;border-color:#fca5a5;"><i class="fas fa-times-circle"></i> Credential rejected. Learner has been notified.</div>';
+      setTimeout(() => window.location.href = '/admin', 1800);
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-times"></i> Confirm Rejection';
+  }
+}
+
+// Initialize
+updateChecklist();
+
+// Fraud check toggle
+function toggleChecks() {
+  const el   = document.getElementById('allChecks');
+  const icon = document.getElementById('checksIcon');
+  const visible = el.style.display !== 'none';
+  el.style.display   = visible ? 'none' : 'block';
+  icon.className     = visible ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+}
+
+// Re-run fraud check via API
+async function rerunFraudCheck(cid) {
+  const btn = document.getElementById('rerunBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
+  btn.disabled  = true;
+  try {
+    const res  = await fetch('/api/fraud_check/' + cid);
+    const data = await res.json();
+    if (data.risk_score !== undefined) {
+      // Reload to show updated results
+      location.reload();
+    }
+  } catch(e) {
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Re-run Fraud Check';
+    btn.disabled  = false;
+  }
+}
+</script>
+{% endblock %}

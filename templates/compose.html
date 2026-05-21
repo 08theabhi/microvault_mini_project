@@ -1,0 +1,105 @@
+{% extends "base.html" %}{% block title %}Compose Message{% endblock %}
+{% block extra_head %}<style>
+.compose-wrap{max-width:640px;}
+.contact-select{display:flex;flex-direction:column;gap:0.5rem;max-height:220px;overflow-y:auto;padding-right:0.25rem;}
+.contact-opt{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.875rem;border:1.5px solid rgba(0,0,0,0.15);border-radius:10px;cursor:pointer;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);}
+.contact-opt:hover{border-color:#c47a1a;background:rgba(240,164,48,0.08);}
+.contact-opt.selected{border-color:#c47a1a;background:rgba(240,164,48,0.08);}
+.contact-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:0.9rem;color:#1a0800;flex-shrink:0;}
+</style>{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.5rem;"><a href="/inbox" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Inbox</a></div>
+
+<div class="compose-wrap reveal">
+  <h1 style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;margin-bottom:1.75rem;color:#1a1a1a;"><i class="fas fa-pen" style="color:#c47a1a;margin-right:0.6rem;"></i>New Message</h1>
+
+  <div class="card">
+    <form method="POST" action="/compose">
+      <input type="hidden" name="receiver_id" id="receiverIdHidden">
+
+      <div class="form-group">
+        <label>To</label>
+        {% if contacts %}
+        <div style="position:relative;">
+          <input type="text" id="contactSearch" class="form-control" placeholder="Search contacts…" autocomplete="off" oninput="filterContacts(this.value)">
+        </div>
+        <div class="contact-select" id="contactList" style="margin-top:0.5rem;">
+          {% for u in contacts %}
+          <div class="contact-opt" id="contact_{{ u.user_id }}" onclick="selectContact('{{ u.user_id }}','{{ u.name }}','{{ u.role }}')">
+            <div class="contact-av" style="background:{{ u.avatar_color or '#c47a1a' }};">{{ u.name[0]|upper }}</div>
+            <div>
+              <div style="font-weight:700;font-size:0.875rem;color:#1a1a1a;">{{ u.name }}</div>
+              <div style="font-size:0.72rem;color:rgba(0,0,0,0.45);">{{ u.role|title }}{% if u.headline %} · {{ u.headline[:40] }}{% endif %}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div id="selectedBadge" style="display:none;margin-top:0.5rem;display:none;align-items:center;gap:0.5rem;background:rgba(240,164,48,0.1);border:1px solid rgba(240,164,48,0.25);border-radius:8px;padding:0.4rem 0.875rem;font-size:0.85rem;">
+          <i class="fas fa-user-check" style="color:#c47a1a;"></i>
+          <span id="selectedName" style="font-weight:600;color:#1a1a1a;"></span>
+          <button type="button" onclick="clearContact()" style="background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.45);margin-left:auto;font-size:0.9rem;">✕</button>
+        </div>
+        {% else %}
+        <div class="flash" style="background:rgba(240,164,48,0.08);border-color:rgba(240,164,48,0.2);color:#c47a1a;margin-top:0.5rem;">
+          <i class="fas fa-info-circle"></i>
+          {% if session.role=='learner' %}
+            No contacts yet. Employers who message you will appear here so you can reply.
+          {% else %}
+            No learners found.
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label>Subject</label>
+        <div class="input-wrap">
+          <i class="fas fa-heading input-icon"></i>
+          <input type="text" name="subject" class="form-control" placeholder="What is this about?" maxlength="120">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Message</label>
+        <textarea name="body" class="form-control" rows="6" placeholder="Write your message here…" required></textarea>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;">
+        <button type="submit" class="btn btn-amber" id="sendBtn" {% if not contacts %}disabled{% endif %}>
+          <i class="fas fa-paper-plane"></i> Send Message
+        </button>
+        <a href="/inbox" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let chosen = '';
+function selectContact(uid, name, role) {
+  chosen = uid;
+  document.getElementById('receiverIdHidden').value = uid;
+  document.querySelectorAll('.contact-opt').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('contact_'+uid).classList.add('selected');
+  document.getElementById('selectedName').textContent = name + ' (' + role + ')';
+  document.getElementById('selectedBadge').style.display = 'flex';
+  document.getElementById('contactSearch').value = name;
+  document.getElementById('sendBtn').disabled = false;
+}
+function clearContact() {
+  chosen = '';
+  document.getElementById('receiverIdHidden').value = '';
+  document.querySelectorAll('.contact-opt').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('selectedBadge').style.display = 'none';
+  document.getElementById('contactSearch').value = '';
+  document.getElementById('sendBtn').disabled = true;
+}
+function filterContacts(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.contact-opt').forEach(el => {
+    const name = el.querySelector('div > div:first-child').textContent.toLowerCase();
+    el.style.display = name.includes(q) ? 'flex' : 'none';
+  });
+}
+</script>
+{% endblock %}

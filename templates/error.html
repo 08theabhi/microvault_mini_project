@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}{{ code }} Error{% endblock %}
+{% block content %}
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;text-align:center;">
+  <div class="reveal">
+    <div style="font-family:'Fraunces',serif;font-size:7rem;font-weight:900;line-height:1;background:linear-gradient(135deg,#c47a1a,rgba(240,164,48,0.3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">{{ code }}</div>
+    <h2 style="font-family:'Fraunces',serif;font-size:1.5rem;margin:0.75rem 0 0.5rem;color:#1a1a1a;">{{ message }}</h2>
+    <p style="color:rgba(0,0,0,0.45);margin-bottom:2rem;">Sorry about that — let's get you back on track.</p>
+    <a href="/" class="btn btn-amber"><i class="fas fa-home"></i> Go Home</a>
+    <a href="javascript:history.back()" class="btn btn-ghost" style="margin-left:0.75rem;"><i class="fas fa-arrow-left"></i> Go Back</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends "base.html" %}{% block title %}{{ msg.subject }}{% endblock %}
+{% block extra_head %}<style>
+.chat-layout{display:grid;grid-template-columns:280px 1fr;gap:0;height:calc(100vh - var(--nav-h) - 3rem);border:1px solid rgba(0,0,0,0.1);border-radius:16px;overflow:hidden;background:#ffffff;}
+@media(max-width:768px){.chat-layout{grid-template-columns:1fr;height:auto;}}
+
+/* Sidebar */
+.chat-sidebar{border-right:1px solid rgba(0,0,0,0.1);background:#ebebeb;display:flex;flex-direction:column;}
+.chat-sidebar-header{padding:1.25rem;border-bottom:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;gap:0.75rem;}
+.conv-item{padding:0.875rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;display:flex;gap:0.75rem;align-items:center;}
+.conv-item:hover{background:rgba(255,255,255,0.03);}
+.conv-item.active{background:rgba(240,164,48,0.08);border-left:3px solid #c47a1a;}
+.conv-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:0.85rem;flex-shrink:0;color:#1a0800;}
+.conv-name{font-weight:700;font-size:0.82rem;color:#1a1a1a;}
+.conv-preview{font-size:0.72rem;color:rgba(0,0,0,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:#c47a1a;flex-shrink:0;}
+
+/* Chat area */
+.chat-main{display:flex;flex-direction:column;height:100%;}
+.chat-header{padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;gap:0.875rem;background:#ffffff;}
+.chat-header-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:1rem;flex-shrink:0;color:#1a0800;}
+.online-dot{width:10px;height:10px;border-radius:50%;background:#34d399;border:2px solid #ffffff;margin-left:-12px;margin-top:24px;flex-shrink:0;}
+
+/* Messages area */
+.chat-messages{flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;scroll-behavior:smooth;}
+.bubble-wrap{display:flex;gap:0.6rem;align-items:flex-end;max-width:78%;}
+.bubble-wrap.mine{align-self:flex-end;flex-direction:row-reverse;}
+.bubble-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.7rem;flex-shrink:0;color:#1a0800;}
+.bubble{padding:0.65rem 0.975rem;border-radius:16px;font-size:0.875rem;line-height:1.65;max-width:100%;word-break:break-word;position:relative;}
+.bubble.theirs{background:#f0f0f0;border:1px solid rgba(0,0,0,0.1);border-bottom-left-radius:4px;color:rgba(0,0,0,0.75);}
+.bubble.mine{background:#c47a1a;color:#1a0800;border-bottom-right-radius:4px;font-weight:500;}
+.bubble-time{font-size:0.65rem;color:rgba(0,0,0,0.45);margin-top:0.2rem;text-align:right;}
+.bubble-wrap.mine .bubble-time{text-align:left;}
+
+/* Typing indicator */
+.typing-indicator{display:none;align-items:center;gap:0.5rem;padding:0.5rem 0;font-size:0.78rem;color:rgba(0,0,0,0.45);}
+.typing-indicator.show{display:flex;}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.45);display:inline-block;animation:typingBounce 1.2s infinite;}
+.typing-dots span:nth-child(2){animation-delay:0.2s;}
+.typing-dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* Input area */
+.chat-input{padding:1rem 1.25rem;border-top:1px solid rgba(0,0,0,0.1);background:#ffffff;}
+.input-row{display:flex;gap:0.6rem;align-items:flex-end;}
+.chat-textarea{flex:1;background:#f0f0f0;border:1.5px solid rgba(0,0,0,0.15);border-radius:12px;padding:0.65rem 0.875rem;color:#1a1a1a;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:none;min-height:44px;max-height:120px;line-height:1.5;transition:border-color 0.2s,box-shadow 0.2s;outline:none;overflow-y:auto;}
+.chat-textarea:focus{border-color:#c47a1a;box-shadow:0 0 0 3px rgba(240,164,48,0.25);}
+.send-btn{width:44px;height:44px;border-radius:12px;background:#c47a1a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a0800;font-size:1rem;transition:all 0.2s;flex-shrink:0;}
+.send-btn:hover{background:#e09428;transform:scale(1.05);}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* Real-time badge */
+.rt-badge{display:inline-flex;align-items:center;gap:0.3rem;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);border-radius:20px;padding:0.2rem 0.6rem;font-size:0.68rem;color:#34d399;font-weight:600;}
+.rt-dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+  <a href="/inbox" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Inbox</a>
+  <span class="rt-badge" id="rtBadge" style="display:none;">
+    <span class="rt-dot"></span> Real-time
+  </span>
+</div>
+
+<div class="chat-layout reveal">
+  <!-- Sidebar: conversation info -->
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <div class="conv-av" style="background:{{ msg.sender_color or '#c47a1a' }};width:40px;height:40px;border-radius:50%;font-size:1rem;">
+        {% if msg.sender_id == session.user_id %}
+          {{ msg.sender_name[0]|upper }}
+        {% else %}
+          {{ msg.sender_name[0]|upper }}
+        {% endif %}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:0.875rem;color:#1a1a1a;">
+          {% if msg.sender_id == session.user_id %}You → {% endif %}
+          {{ msg.sender_name if msg.sender_id != session.user_id else 'You' }}
+        </div>
+        <div style="font-size:0.72rem;color:rgba(0,0,0,0.45);">{{ msg.sender_role|title }}</div>
+      </div>
+    </div>
+
+    <div style="padding:1rem;border-bottom:1px solid rgba(0,0,0,0.1);">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.4rem;">Subject</div>
+      <div style="font-size:0.82rem;color:#1a1a1a;font-weight:600;line-height:1.5;">{{ msg.subject }}</div>
+    </div>
+
+    <div style="padding:1rem;border-bottom:1px solid rgba(0,0,0,0.1);">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.4rem;">Started</div>
+      <div style="font-size:0.78rem;color:rgba(0,0,0,0.45);">{{ msg.created_at[:16].replace('T',' ') }}</div>
+    </div>
+
+    <div style="padding:1rem;flex:1;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(0,0,0,0.45);margin-bottom:0.4rem;">Messages</div>
+      <div id="msgCountBadge" style="font-size:0.82rem;color:#1a1a1a;">{{ thread|length + 1 }} message{% if thread|length > 0 %}s{% endif %}</div>
+    </div>
+  </div>
+
+  <!-- Main chat area -->
+  <div class="chat-main">
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="chat-header-av" style="background:{{ msg.sender_color or '#c47a1a' }};">
+        {{ msg.sender_name[0]|upper }}
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.9rem;color:#1a1a1a;">
+          {% if msg.sender_id == session.user_id %}
+            Conversation with recipient
+          {% else %}
+            {{ msg.sender_name }}
+          {% endif %}
+        </div>
+        <div style="font-size:0.75rem;color:rgba(0,0,0,0.45);" id="statusText">{{ msg.sender_role|title }}</div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chatMessages">
+      <!-- Original message -->
+      <div class="bubble-wrap {% if msg.sender_id == session.user_id %}mine{% endif %}" id="msg-{{ msg.msg_id }}">
+        <div class="bubble-av" style="background:{{ msg.sender_color or '#c47a1a' }};">{{ msg.sender_name[0]|upper }}</div>
+        <div>
+          <div class="bubble {% if msg.sender_id == session.user_id %}mine{% else %}theirs{% endif %}">{{ msg.body }}</div>
+          <div class="bubble-time">{{ msg.created_at[:16].replace('T',' ') }}</div>
+        </div>
+      </div>
+
+      <!-- Thread replies -->
+      {% for r in thread %}
+      <div class="bubble-wrap {% if r.sender_id == session.user_id %}mine{% endif %}" id="msg-{{ r.msg_id }}">
+        <div class="bubble-av" style="background:{{ r.sender_color or '#c47a1a' }};">{{ r.sender_name[0]|upper }}</div>
+        <div>
+          <div class="bubble {% if r.sender_id == session.user_id %}mine{% else %}theirs{% endif %}">{{ r.body }}</div>
+          <div class="bubble-time">{{ r.created_at[:16].replace('T',' ') }}</div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Typing indicator -->
+      <div class="typing-indicator" id="typingIndicator">
+        <div class="bubble-av" style="background:#6b7280;">?</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span id="typingName" style="font-size:0.75rem;color:rgba(0,0,0,0.45);"></span>
+            <div class="typing-dots" style="display:flex;gap:3px;">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input">
+      <div class="input-row">
+        <textarea class="chat-textarea" id="replyInput"
+                  placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                  rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send (Enter)">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Socket.IO client -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+const CONV_ID      = '{{ msg.msg_id }}';
+const MY_ID        = '{{ session.user_id }}';
+const MY_NAME      = '{{ session.name }}';
+const OTHER_ID     = '{{ msg.receiver_id if msg.sender_id == session.user_id else msg.sender_id }}';
+const OTHER_COLOR  = '{{ msg.sender_color or "#c47a1a" }}';
+const OTHER_NAME   = '{{ msg.sender_name if msg.sender_id != session.user_id else "You" }}';
+
+let socket = null;
+let typingTimer = null;
+let isTyping    = false;
+let socketReady = false;
+
+// ── Initialize SocketIO ──
+function initSocket() {
+  try {
+    socket = io({transports: ['websocket', 'polling'], timeout: 5000});
+
+    socket.on('connect', () => {
+      socketReady = true;
+      document.getElementById('rtBadge').style.display = 'inline-flex';
+      document.getElementById('statusText').textContent = 'Online · Real-time';
+      socket.emit('join_conversation', {conv_id: CONV_ID});
+    });
+
+    socket.on('disconnect', () => {
+      socketReady = false;
+      document.getElementById('rtBadge').style.display = 'none';
+      document.getElementById('statusText').textContent = 'Reconnecting…';
+    });
+
+    socket.on('connect_error', () => {
+      socketReady = false;
+      document.getElementById('rtBadge').style.display = 'none';
+    });
+
+    // New reply received in real-time
+    socket.on('new_reply', (data) => {
+      if (data.sender_id !== MY_ID) {
+        appendBubble(data, false);
+        updateCount();
+        // Mark as read
+        socket.emit('mark_read', {msg_id: data.msg_id});
+      }
+    });
+
+    // New message in inbox (for sidebar notification)
+    socket.on('new_message', (data) => {
+      if (data.parent_id === CONV_ID || data.parent_id === null) {
+        // Already handled by new_reply for this conversation
+      }
+    });
+
+    // Confirmation that OUR message was saved
+    socket.on('message_sent', (data) => {
+      // Remove optimistic bubble placeholder if any, or just scroll
+      scrollToBottom();
+    });
+
+    // Typing indicators
+    socket.on('user_typing', (data) => {
+      if (data.sender_id !== MY_ID) {
+        const el = document.getElementById('typingIndicator');
+        document.getElementById('typingName').textContent = data.sender_name + ' is typing';
+        el.classList.add('show');
+        scrollToBottom();
+      }
+    });
+
+    socket.on('user_stop_typing', (data) => {
+      if (data.sender_id !== MY_ID) {
+        document.getElementById('typingIndicator').classList.remove('show');
+      }
+    });
+
+    socket.on('message_error', (data) => {
+      console.error('Message error:', data.error);
+      alert('Failed to send: ' + data.error);
+    });
+
+  } catch(e) {
+    console.log('SocketIO not available, using fallback');
+  }
+}
+
+// ── Send message ──
+async function sendMessage() {
+  const input = document.getElementById('replyInput');
+  const body  = input.value.trim();
+  if (!body) return;
+
+  // Optimistic UI — show bubble immediately
+  const tempData = {
+    msg_id:      'temp-' + Date.now(),
+    sender_id:   MY_ID,
+    sender_name: MY_NAME,
+    sender_color:'#c47a1a',
+    body:        body,
+    created_at:  new Date().toISOString(),
+  };
+  appendBubble(tempData, true);
+  input.value = '';
+  autoResize(input);
+  updateCount();
+
+  if (socketReady && socket) {
+    // Real-time send via SocketIO
+    socket.emit('send_message', {
+      receiver_id: OTHER_ID,
+      body:        body,
+      subject:     'Re: {{ msg.subject }}',
+      parent_id:   CONV_ID,
+    });
+    stopTyping();
+  } else {
+    // Fallback: HTTP POST
+    try {
+      const res = await fetch('/inbox/reply/{{ msg.msg_id }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({body})
+      });
+      if (!res.ok) console.error('Fallback send failed');
+    } catch(e) {
+      console.error('Fallback send error:', e);
+    }
+  }
+}
+
+// ── Append a bubble to chat ──
+function appendBubble(data, isMine) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap' + (isMine ? ' mine' : '');
+  wrap.id = 'msg-' + data.msg_id;
+
+  const color = isMine ? '#c47a1a' : (data.sender_color || OTHER_COLOR);
+  const name  = isMine ? MY_NAME : (data.sender_name || OTHER_NAME);
+  const time  = data.created_at ? data.created_at.slice(0,16).replace('T',' ') : 'now';
+
+  wrap.innerHTML = `
+    <div class="bubble-av" style="background:${color};">${name[0].toUpperCase()}</div>
+    <div>
+      <div class="bubble ${isMine ? 'mine' : 'theirs'}">${escapeHtml(data.body)}</div>
+      <div class="bubble-time">${time}</div>
+    </div>`;
+
+  // Insert before typing indicator
+  const typing = document.getElementById('typingIndicator');
+  const container = document.getElementById('chatMessages');
+  container.insertBefore(wrap, typing);
+  scrollToBottom();
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function scrollToBottom() {
+  const el = document.getElementById('chatMessages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateCount() {
+  const bubbles = document.querySelectorAll('.bubble-wrap').length;
+  document.getElementById('msgCountBadge').textContent = bubbles + ' message' + (bubbles !== 1 ? 's' : '');
+}
+
+// ── Auto-resize textarea ──
+function autoResize(el) {
+  el.style.height = '44px';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Typing indicator ──
+function startTyping() {
+  if (!isTyping && socketReady && socket) {
+    isTyping = true;
+    socket.emit('typing', {receiver_id: OTHER_ID});
+  }
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(stopTyping, 2000);
+}
+
+function stopTyping() {
+  if (isTyping && socketReady && socket) {
+    isTyping = false;
+    socket.emit('stop_typing', {receiver_id: OTHER_ID});
+  }
+  clearTimeout(typingTimer);
+}
+
+// ── Input events ──
+const input = document.getElementById('replyInput');
+input.addEventListener('input', () => { autoResize(input); startTyping(); });
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ── Init ──
+initSocket();
+scrollToBottom();
+</script>
+{% endblock %}

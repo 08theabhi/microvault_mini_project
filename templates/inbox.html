@@ -1,0 +1,108 @@
+{% extends "base.html" %}{% block title %}Inbox{% endblock %}
+{% block extra_head %}<style>
+.inbox-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.msg-list{display:flex;flex-direction:column;gap:0.6rem;max-width:780px;}
+.msg-item{background:#ffffff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:1.1rem 1.4rem;display:flex;gap:1rem;align-items:flex-start;transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94);cursor:pointer;text-decoration:none;position:relative;}
+.msg-item:hover{border-color:rgba(240,164,48,0.3);transform:translateX(3px);}
+.msg-item.unread{border-left:3px solid #c47a1a;}
+.msg-item.sent-item{border-left:3px solid #2dd4bf;opacity:0.85;}
+.msg-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:1rem;flex-shrink:0;color:#1a0800;}
+.msg-subject{font-weight:700;font-size:0.9rem;color:#1a1a1a;}
+.msg-preview{color:rgba(0,0,0,0.45);font-size:0.8rem;margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:440px;}
+.msg-time{color:rgba(0,0,0,0.45);font-size:0.72rem;white-space:nowrap;}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:#c47a1a;flex-shrink:0;margin-top:6px;}
+.sent-dot{width:8px;height:8px;border-radius:50%;background:#2dd4bf;flex-shrink:0;margin-top:6px;}
+.tab-row{display:flex;gap:0;border-bottom:1px solid rgba(0,0,0,0.1);margin-bottom:1.5rem;max-width:780px;}
+.tab-btn{padding:0.65rem 1.25rem;border:none;background:none;font-family:'DM Sans',sans-serif;font-size:0.83rem;font-weight:600;color:rgba(0,0,0,0.45);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;}
+.tab-btn.on{color:#c47a1a;border-bottom-color:#c47a1a;}
+.tab-pane{display:none;}.tab-pane.on{display:block;}
+</style>{% endblock %}
+{% block content %}
+
+<div class="inbox-header reveal">
+  <div>
+    <h1 style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;color:#1a1a1a;"><i class="fas fa-inbox" style="color:#c47a1a;margin-right:0.6rem;font-size:1.4rem;"></i>Inbox</h1>
+    <p style="color:rgba(0,0,0,0.45);font-size:0.875rem;margin-top:0.25rem;">
+      {% if unread > 0 %}<span style="color:#c47a1a;font-weight:600;">{{ unread }} unread</span> · {% endif %}
+      {{ messages|length }} conversation{% if messages|length != 1 %}s{% endif %}
+    </p>
+  </div>
+  <a href="/compose" class="btn btn-amber"><i class="fas fa-pen"></i> Compose</a>
+</div>
+
+{% set received = messages|selectattr('receiver_id','equalto',session.user_id)|list %}
+{% set sent = messages|rejectattr('receiver_id','equalto',session.user_id)|list %}
+
+<div class="tab-row">
+  <button class="tab-btn on" onclick="sw('all',this)">All ({{ messages|length }})</button>
+  <button class="tab-btn" onclick="sw('received',this)">Received ({{ received|length }})</button>
+  <button class="tab-btn" onclick="sw('sent',this)">Sent ({{ sent|length }})</button>
+</div>
+
+{% macro msg_card(m) %}
+{% set is_sent = m.sender_id == session.user_id %}
+{% set other_name = m.receiver_name if is_sent else m.sender_name %}
+{% set other_color = m.receiver_color if is_sent else m.sender_color %}
+<a href="/inbox/{{ m.msg_id }}" class="msg-item {% if not is_sent and not m.is_read %}unread{% elif is_sent %}sent-item{% endif %}">
+  <div class="msg-avatar" style="background:{{ other_color or '#c47a1a' }};">{{ other_name[0]|upper if other_name else '?' }}</div>
+  <div style="flex:1;min-width:0;">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;flex-wrap:wrap;">
+      <div class="msg-subject">{{ m.subject }}</div>
+      {% if is_sent %}
+        <span style="font-size:0.65rem;background:rgba(45,212,191,0.1);color:#2dd4bf;border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:1px 6px;">Sent</span>
+      {% endif %}
+      {% if m.reply_count and m.reply_count > 0 %}
+        <span style="font-size:0.65rem;color:rgba(0,0,0,0.45);"><i class="fas fa-reply"></i> {{ m.reply_count }} repl{{ 'y' if m.reply_count==1 else 'ies' }}</span>
+      {% endif %}
+    </div>
+    <div style="font-size:0.78rem;color:rgba(0,0,0,0.45);margin-bottom:0.2rem;">
+      {% if is_sent %}To: <strong style="color:#1a1a1a;">{{ other_name }}</strong>{% else %}From: <strong style="color:#1a1a1a;">{{ other_name }}</strong>{% endif %}
+      <span style="color:rgba(0,0,0,0.45);"> · {{ m.sender_role if not is_sent else '' }}</span>
+    </div>
+    <div class="msg-preview">{{ m.body }}</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0;">
+    <div class="msg-time">{{ m.created_at[:10] }}</div>
+    {% if not is_sent and not m.is_read %}<div class="unread-dot"></div>
+    {% elif is_sent %}<div class="sent-dot"></div>{% endif %}
+  </div>
+</a>
+{% endmacro %}
+
+<div id="tab-all" class="tab-pane on msg-list stagger-children">
+  {% if messages %}
+    {% for m in messages %}{{ msg_card(m) }}{% endfor %}
+  {% else %}
+    <div class="card empty-state"><span class="ei">📭</span><h3>No messages yet</h3>
+      <p>{% if session.role=='learner' %}Employers will contact you here. You can also <a href="/compose" style="color:#c47a1a;">compose a message</a>.{% else %}Start a conversation by clicking Contact on any learner profile.{% endif %}</p>
+    </div>
+  {% endif %}
+</div>
+
+<div id="tab-received" class="tab-pane msg-list">
+  {% if received %}
+    {% for m in received %}{{ msg_card(m) }}{% endfor %}
+  {% else %}
+    <div class="card empty-state"><span class="ei">📬</span><h3>No received messages</h3></div>
+  {% endif %}
+</div>
+
+<div id="tab-sent" class="tab-pane msg-list">
+  {% if sent %}
+    {% for m in sent %}{{ msg_card(m) }}{% endfor %}
+  {% else %}
+    <div class="card empty-state"><span class="ei">📤</span><h3>No sent messages</h3>
+      <p><a href="/compose" style="color:#c47a1a;">Compose your first message</a></p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+function sw(n,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+n).classList.add('on');
+}
+</script>
+{% endblock %}

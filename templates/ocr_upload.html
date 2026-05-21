@@ -1,0 +1,805 @@
+{% extends "base.html" %}
+
+{% block title %}OCR Certificate Verification{% endblock %}
+
+{% block content %}
+<div class="ocr-container">
+  <!-- Header -->
+  <div class="ocr-header reveal">
+    <div class="header-content">
+      <h1><i class="fas fa-certificate"></i> Certificate Verification</h1>
+      <p class="subtitle">Upload your certificate for automated OCR verification</p>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="ocr-tabs reveal">
+    <button class="tab-btn active" data-tab="upload">
+      <i class="fas fa-upload"></i> Upload Certificate
+    </button>
+    <button class="tab-btn" data-tab="batch">
+      <i class="fas fa-files"></i> Batch Upload
+    </button>
+    <button class="tab-btn" data-tab="compare">
+      <i class="fas fa-exchange-alt"></i> Compare Images
+    </button>
+    <button class="tab-btn" data-tab="history">
+      <i class="fas fa-history"></i> Verification History
+    </button>
+  </div>
+
+  <!-- Tab 1: Single Certificate Upload -->
+  <div class="tab-content active" id="upload-tab">
+    <div class="upload-section reveal">
+      <div class="upload-card">
+        <h2>Upload Your Certificate</h2>
+        <p>Drag and drop your certificate image or click to select</p>
+
+        <!-- File Upload Area -->
+        <div class="file-upload-area" id="uploadArea">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p class="upload-text">Drag certificate image here</p>
+          <input type="file" id="certificateFile" accept="image/*" hidden>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('certificateFile').click();">
+            <i class="fas fa-folder-open"></i> Select File
+          </button>
+        </div>
+
+        <!-- File Info -->
+        <div class="file-info" id="fileInfo" style="display: none;">
+          <div class="info-row">
+            <span class="label">File:</span>
+            <span id="fileName" class="value"></span>
+          </div>
+          <div class="info-row">
+            <span class="label">Size:</span>
+            <span id="fileSize" class="value"></span>
+          </div>
+          <div class="info-row">
+            <span class="label">Type:</span>
+            <span id="fileType" class="value"></span>
+          </div>
+        </div>
+
+        <!-- Process Options -->
+        <div class="process-options">
+          <label>
+            <input type="checkbox" id="verifyCheckbox" checked>
+            <span>Verify against stored credential</span>
+          </label>
+          <label>
+            <input type="checkbox" id="compareCheckbox">
+            <span>Compare with previous uploads</span>
+          </label>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button id="processBtn" class="btn btn-primary" onclick="processImage()" disabled>
+            <i class="fas fa-cog"></i> Process Certificate
+          </button>
+          <button id="clearBtn" class="btn btn-secondary" onclick="clearUpload()" style="display: none;">
+            <i class="fas fa-trash"></i> Clear
+          </button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section" id="progressSection" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p class="progress-text" id="progressText">Processing...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section" id="resultsSection" style="display: none;">
+      <div class="results-card reveal">
+        <h2>OCR Results</h2>
+
+        <!-- OCR Data -->
+        <div class="ocr-data">
+          <h3>Extracted Information</h3>
+          <div class="data-grid">
+            <div class="data-item">
+              <span class="label">OCR Confidence</span>
+              <span class="value" id="ocrConfidence">--</span>
+            </div>
+            <div class="data-item">
+              <span class="label">Certificate Number</span>
+              <span class="value" id="certNumber">--</span>
+            </div>
+            <div class="data-item">
+              <span class="label">Issue Date</span>
+              <span class="value" id="issueDate">--</span>
+            </div>
+            <div class="data-item">
+              <span class="label">Institution</span>
+              <span class="value" id="institution">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Status -->
+        <div class="validation-status">
+          <h3>Validation Status</h3>
+          <div id="validationResults"></div>
+        </div>
+
+        <!-- Authenticity Status -->
+        <div class="authenticity-status" id="authenticity" style="display: none;">
+          <h3>Authenticity Verification</h3>
+          <div class="status-badge" id="statusBadge"></div>
+          <div id="authenticityDetails"></div>
+        </div>
+
+        <!-- Extracted Text -->
+        <div class="extracted-text">
+          <h3>Raw Text</h3>
+          <div class="text-box">
+            <p id="extractedText"></p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="result-actions">
+          <button class="btn btn-primary" onclick="downloadResults()">
+            <i class="fas fa-download"></i> Download Report
+          </button>
+          <button class="btn btn-secondary" onclick="shareResults()">
+            <i class="fas fa-share"></i> Share Results
+          </button>
+          <button class="btn btn-secondary" onclick="newUpload()">
+            <i class="fas fa-plus"></i> New Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Batch Upload -->
+  <div class="tab-content" id="batch-tab">
+    <div class="batch-section reveal">
+      <div class="batch-card">
+        <h2>Batch Process Certificates</h2>
+        <p>Upload multiple certificates at once</p>
+
+        <div class="file-upload-area" id="batchUploadArea">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p class="upload-text">Drag multiple certificate images here</p>
+          <input type="file" id="batchFiles" accept="image/*" multiple hidden>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('batchFiles').click();">
+            <i class="fas fa-folder-open"></i> Select Files
+          </button>
+        </div>
+
+        <div id="fileList" style="margin-top: 1.5rem; display: none;">
+          <h4>Files to Process:</h4>
+          <ul id="fileListItems"></ul>
+        </div>
+
+        <button id="processBatchBtn" class="btn btn-primary" style="margin-top: 1.5rem;" onclick="processBatch()" disabled>
+          <i class="fas fa-cog"></i> Process All
+        </button>
+
+        <div id="batchResults" style="margin-top: 2rem; display: none;">
+          <h3>Batch Processing Results</h3>
+          <div class="batch-status">
+            <div class="status-item">
+              <span>Total:</span>
+              <span id="totalFiles">0</span>
+            </div>
+            <div class="status-item">
+              <span>Processed:</span>
+              <span id="processedFiles" style="color: #10b981;">0</span>
+            </div>
+            <div class="status-item">
+              <span>Failed:</span>
+              <span id="failedFiles" style="color: #ef4444;">0</span>
+            </div>
+          </div>
+          <div id="batchResultsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Compare Images -->
+  <div class="tab-content" id="compare-tab">
+    <div class="compare-section reveal">
+      <div class="compare-card">
+        <h2>Compare Certificate Images</h2>
+        <p>Upload multiple photos of the same certificate to verify consistency</p>
+
+        <div class="file-upload-area" id="compareUploadArea">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p class="upload-text">Drag 2 or more images of the same certificate</p>
+          <input type="file" id="compareFiles" accept="image/*" multiple hidden>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('compareFiles').click();">
+            <i class="fas fa-folder-open"></i> Select Files
+          </button>
+        </div>
+
+        <button id="compareBtn" class="btn btn-primary" style="margin-top: 1.5rem;" onclick="compareImages()" disabled>
+          <i class="fas fa-chart-bar"></i> Analyze Consistency
+        </button>
+
+        <div id="compareResults" style="margin-top: 2rem; display: none;">
+          <h3>Consistency Analysis</h3>
+          <div class="consistency-report">
+            <div class="report-item">
+              <span>Overall Consistency:</span>
+              <span id="overallConsistency" class="consistency-bar"></span>
+            </div>
+            <div id="fieldConsistency"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: History -->
+  <div class="tab-content" id="history-tab">
+    <div class="history-section reveal">
+      <h2>Verification History</h2>
+      <div class="history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Certificate</th>
+              <th>Status</th>
+              <th>Confidence</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-secondary);">
+                No verification history yet
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ocr-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.ocr-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.ocr-header h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.ocr-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Tabs */
+.ocr-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Upload Card */
+.upload-card, .batch-card, .compare-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.upload-card h2, .batch-card h2, .compare-card h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.upload-card > p, .batch-card > p, .compare-card > p {
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+/* File Upload Area */
+.file-upload-area {
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.file-upload-area:hover {
+  border-color: var(--accent);
+  background: rgba(196, 122, 26, 0.05);
+}
+
+.file-upload-area.drag-over {
+  border-color: var(--accent);
+  background: rgba(196, 122, 26, 0.1);
+  transform: scale(1.02);
+}
+
+.file-upload-area i {
+  font-size: 3rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+
+.file-upload-area .upload-text {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+/* File Info */
+.file-info {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.info-row .value {
+  color: var(--text-primary);
+}
+
+/* Process Options */
+.process-options {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+}
+
+.process-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.process-options input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.action-buttons .btn {
+  flex: 1;
+}
+
+.result-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.result-actions .btn {
+  flex: 1;
+}
+
+/* Progress */
+.progress-section {
+  margin-top: 1.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, #a65c1a 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  margin-top: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Results */
+.results-section {
+  margin-top: 2rem;
+}
+
+.results-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.results-card h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.results-card h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Data Grid */
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.data-item {
+  background: var(--bg-primary);
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-item .label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.data-item .value {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  margin: 1rem 0;
+}
+
+.status-badge.verified {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.unverified {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Text Box */
+.text-box {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.text-box p {
+  color: var(--text-primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Tables */
+.history-table {
+  overflow-x: auto;
+}
+
+.history-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table thead {
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.history-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.history-table tbody tr:hover {
+  background: rgba(196, 122, 26, 0.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ocr-container {
+    padding: 1rem;
+  }
+
+  .ocr-tabs {
+    gap: 0.5rem;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .upload-card, .batch-card, .compare-card {
+    padding: 1.5rem;
+  }
+
+  .file-upload-area {
+    padding: 2rem 1rem;
+  }
+
+  .action-buttons, .result-actions {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn, .result-actions .btn {
+    width: 100%;
+  }
+
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+// File upload handling
+const uploadArea = document.getElementById('uploadArea');
+const certificateFile = document.getElementById('certificateFile');
+
+// Drag and drop
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+  uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    certificateFile.files = files;
+    displayFileInfo(files[0]);
+  }
+});
+
+certificateFile.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) {
+    displayFileInfo(e.target.files[0]);
+  }
+});
+
+function displayFileInfo(file) {
+  const fileInfo = document.getElementById('fileInfo');
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
+  document.getElementById('fileType').textContent = file.type;
+  fileInfo.style.display = 'block';
+  document.getElementById('processBtn').disabled = false;
+  document.getElementById('clearBtn').style.display = 'block';
+}
+
+function clearUpload() {
+  certificateFile.value = '';
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('processBtn').disabled = true;
+  document.getElementById('clearBtn').style.display = 'none';
+}
+
+async function processImage() {
+  if (certificateFile.files.length === 0) return;
+
+  const formData = new FormData();
+  formData.append('file', certificateFile.files[0]);
+
+  const progressSection = document.getElementById('progressSection');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+
+  progressSection.style.display = 'block';
+  progressFill.style.width = '0%';
+
+  try {
+    progressFill.style.width = '30%';
+    progressText.textContent = 'Uploading...';
+
+    const response = await fetch('/ocr/process', {
+      method: 'POST',
+      body: formData
+    });
+
+    progressFill.style.width = '70%';
+    progressText.textContent = 'Processing OCR...';
+
+    const result = await response.json();
+
+    progressFill.style.width = '100%';
+    progressText.textContent = 'Complete!';
+
+    setTimeout(() => {
+      displayResults(result);
+    }, 500);
+
+  } catch (error) {
+    alert('Error processing certificate: ' + error.message);
+  }
+}
+
+function displayResults(data) {
+  const resultsSection = document.getElementById('resultsSection');
+  const progressSection = document.getElementById('progressSection');
+
+  if (data.success) {
+    const fields = data.steps?.ocr_extraction?.fields_detected || {};
+    const validation = data.steps?.field_validation || {};
+
+    document.getElementById('ocrConfidence').textContent = 
+      (data.steps?.ocr_extraction?.confidence * 100).toFixed(1) + '%';
+    document.getElementById('certNumber').textContent = fields.certificate_number || '--';
+    document.getElementById('issueDate').textContent = fields.date || '--';
+    document.getElementById('institution').textContent = fields.institution || '--';
+    document.getElementById('extractedText').textContent = 
+      data.steps?.ocr_extraction?.raw_text || 'No text extracted';
+
+    // Display validation results
+    const validationHtml = `
+      <p>Status: <strong>${validation.valid ? '✓ Valid' : '✗ Invalid'}</strong></p>
+      ${validation.warnings ? '<p style="color: #f59e0b;">Warnings: ' + validation.warnings.join(', ') + '</p>' : ''}
+      ${validation.issues ? '<p style="color: #ef4444;">Issues: ' + validation.issues.join(', ') + '</p>' : ''}
+    `;
+    document.getElementById('validationResults').innerHTML = validationHtml;
+
+    resultsSection.style.display = 'block';
+    progressSection.style.display = 'none';
+
+    // Scroll to results
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    alert('Processing failed: ' + data.error);
+  }
+}
+
+function newUpload() {
+  clearUpload();
+  document.getElementById('resultsSection').style.display = 'none';
+  uploadArea.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.dataset.tab;
+    
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    
+    // Remove active class from buttons
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+    btn.classList.add('active');
+  });
+});
+
+function downloadResults() {
+  alert('Download feature coming soon!');
+}
+
+function shareResults() {
+  alert('Share feature coming soon!');
+}
+</script>
+{% endblock %}

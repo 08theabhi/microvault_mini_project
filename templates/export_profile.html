@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ user.name }} — MicroCred Profile Export</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: white; }
+.page { max-width: 800px; margin: 0 auto; padding: 2.5rem; }
+.print-btn {
+  position: fixed; top: 1.5rem; right: 1.5rem;
+  background: #d4a853; color: #f5f5f5;
+  padding: 0.625rem 1.5rem; border-radius: 8px;
+  border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(212,168,83,0.4);
+}
+@media print { .print-btn, .back-btn { display: none !important; } }
+.back-btn {
+  position: fixed; top: 1.5rem; left: 1.5rem;
+  background: white; color: #333;
+  padding: 0.5rem 1rem; border-radius: 8px;
+  border: 1.5px solid #e2d9c8; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.85rem;
+  text-decoration: none;
+}
+
+/* Header */
+.header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #d4a853; }
+.avatar { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; flex-shrink: 0; }
+.name { font-family: 'Syne', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+.headline { color: #d4a853; font-size: 0.95rem; margin-top: 0.2rem; }
+.meta { color: #6b7280; font-size: 0.82rem; margin-top: 0.4rem; }
+.links { display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.links a { font-size: 0.8rem; color: #2a7f7f; text-decoration: none; }
+.microcred-brand { margin-left: auto; text-align: right; }
+.microcred-brand .brand { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; }
+.microcred-brand .brand span { color: #d4a853; }
+.microcred-brand p { font-size: 0.72rem; color: #aaa; margin-top: 0.2rem; }
+
+/* Stats */
+.stats-row { display: flex; gap: 2rem; margin-bottom: 2rem; }
+.stat { text-align: center; }
+.stat .num { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; }
+.stat .lbl { font-size: 0.75rem; color: #6b7280; }
+
+/* Bio */
+.section { margin-bottom: 2rem; }
+.section-title { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 0.875rem; display: flex; align-items: center; gap: 0.5rem; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: #e2d9c8; }
+
+/* Credentials */
+.cred-item { display: flex; gap: 1rem; padding: 0.875rem 0; border-bottom: 1px solid #f0ece4; align-items: flex-start; page-break-inside: avoid; }
+.cred-item:last-child { border-bottom: none; }
+.cred-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.cred-dot.verified { background: #16a34a; }
+.cred-dot.unverified { background: #d97706; }
+.cred-title { font-weight: 600; font-size: 0.92rem; }
+.cred-meta { font-size: 0.78rem; color: #6b7280; margin-top: 0.2rem; }
+.cred-desc { font-size: 0.8rem; color: #4b5563; margin-top: 0.2rem; }
+.badge { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.68rem; font-weight: 600; margin-top: 0.3rem; }
+.badge.verified { background: #dcfce7; color: #16a34a; }
+.badge.unverified { background: #fef3c7; color: #d97706; }
+
+/* Skills grid */
+.skills-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.5rem; }
+.skill-tag { background: #f5f0e8; border: 1px solid #e2d9c8; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.82rem; text-align: center; }
+
+/* Footer */
+.footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e2d9c8; display: flex; justify-content: space-between; font-size: 0.72rem; color: #aaa; }
+</style>
+</head>
+<body>
+<a href="/dashboard" class="back-btn">← Back to Dashboard</a>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+
+<div class="page">
+  <div class="header">
+    <div class="avatar" style="background:{{ user.avatar_color or '#d4a853' }};color:{{ 'white' if user.avatar_color in ['#2a7f7f','#f5f5f5','#dc2626','#7c3aed','#0369a1'] else '#f5f5f5' }};">
+      {{ user.name[0]|upper }}
+    </div>
+    <div>
+      <div class="name">{{ user.name }}</div>
+      {% if user.headline %}<div class="headline">{{ user.headline }}</div>{% endif %}
+      <div class="meta">
+        {% if user.location %}📍 {{ user.location }}{% endif %}
+        &nbsp;&nbsp;✉ {{ user.email }}
+      </div>
+      <div class="links">
+        {% if user.linkedin %}<a href="{{ user.linkedin }}">LinkedIn</a>{% endif %}
+        {% if user.github %}<a href="{{ user.github }}">GitHub</a>{% endif %}
+        {% if user.website %}<a href="{{ user.website }}">Website</a>{% endif %}
+      </div>
+    </div>
+    <div class="microcred-brand">
+      <div class="brand">Micro<span>Cred</span></div>
+      <p>Verified Skill Profile</p>
+      <p style="margin-top:0.25rem;">{{ now[:10] if now else '' }}</p>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="num">{{ credentials|length }}</div><div class="lbl">Total Credentials</div></div>
+    <div class="stat"><div class="num">{{ verified }}</div><div class="lbl">Verified</div></div>
+    <div class="stat"><div class="num">{{ categories|length }}</div><div class="lbl">Skill Areas</div></div>
+    <div class="stat"><div class="num">{{ [100, credentials|length * 15]|min }}%</div><div class="lbl">Profile Score</div></div>
+  </div>
+
+  {% if user.bio %}
+  <div class="section">
+    <div class="section-title">About</div>
+    <p style="font-size:0.88rem;line-height:1.75;color:#374151;">{{ user.bio }}</p>
+  </div>
+  {% endif %}
+
+  {% if categories %}
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <div class="skills-grid">
+      {% for cat in categories %}
+      <div class="skill-tag">{{ cat }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="section">
+    <div class="section-title">Credentials ({{ credentials|length }})</div>
+    {% for c in credentials %}
+    <div class="cred-item">
+      <div class="cred-dot {{ c.status }}"></div>
+      <div style="flex:1;">
+        <div class="cred-title">{{ c.title }}</div>
+        <div class="cred-meta">{{ c.provider }} &nbsp;·&nbsp; {{ c.issue_date }} &nbsp;·&nbsp; {{ c.skill_category }} &nbsp;·&nbsp; {{ c.level }}</div>
+        {% if c.description %}<div class="cred-desc">{{ c.description[:120] }}{% if c.description|length > 120 %}…{% endif %}</div>{% endif %}
+        <span class="badge {{ c.status }}">{% if c.status=='verified' %}✓{% else %}⏳{% endif %} {{ c.status|title }}</span>
+        <span style="font-size:0.65rem;color:#aaa;margin-left:0.5rem;">Hash: {{ c.hash_value[:24] }}…</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="footer">
+    <span>Generated by MicroCred Platform</span>
+    <span>Verify credentials at microcred.io/verify</span>
+    <span>{{ now[:10] if now else '' }}</span>
+  </div>
+</div>
+</body>
+</html>

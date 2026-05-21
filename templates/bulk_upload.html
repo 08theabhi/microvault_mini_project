@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block title %}Bulk Upload{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.5rem;"><a href="/dashboard" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a></div>
+<div class="page-header reveal"><h1>Bulk Upload Credentials</h1><p>Upload multiple credentials at once using a CSV file</p></div>
+<div style="display:grid;grid-template-columns:1fr 340px;gap:2rem;" class="reveal">
+  <div class="card">
+    <form method="POST" action="/upload/bulk" enctype="multipart/form-data">
+      <div style="border:2px dashed rgba(0,0,0,0.15);border-radius:14px;padding:2.5rem;text-align:center;cursor:pointer;transition:all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);background:#f0f0f0;" id="csvDrop" onclick="document.getElementById('csvFile').click()">
+        <i class="fas fa-file-csv" style="font-size:2.5rem;color:rgba(0,0,0,0.45);margin-bottom:0.75rem;display:block;"></i>
+        <h3 style="font-size:0.9rem;margin-bottom:0.3rem;">Drop your CSV file here</h3>
+        <p style="font-size:0.78rem;color:rgba(0,0,0,0.45);">.csv files only</p>
+        <input type="file" id="csvFile" name="csv_file" accept=".csv" style="display:none">
+        <div id="csvPrev" style="display:none;margin-top:0.75rem;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);color:#34d399;padding:0.5rem 1rem;border-radius:8px;font-size:0.82rem;"></div>
+      </div>
+      <div style="margin-top:1.5rem;"><button type="submit" class="btn btn-amber btn-lg"><i class="fas fa-upload"></i> Upload All</button></div>
+    </form>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:1.25rem;">
+      <h3 style="font-size:0.85rem;color:rgba(0,0,0,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem;">Required CSV Format</h3>
+      <div style="background:#f0f0f0;border-radius:8px;padding:0.875rem;font-family:monospace;font-size:0.75rem;color:rgba(0,0,0,0.75);overflow-x:auto;">title,provider,issue_date,<br>expiry_date,description,<br>skill_category,level,<br>credential_url</div>
+      <hr>
+      <div style="font-size:0.8rem;color:rgba(0,0,0,0.45);line-height:1.8;">
+        <div><span style="color:#fb7185;">*</span> <strong style="color:#1a1a1a;">title</strong> — required</div>
+        <div><span style="color:#fb7185;">*</span> <strong style="color:#1a1a1a;">provider</strong> — required</div>
+        <div><span style="color:#fb7185;">*</span> <strong style="color:#1a1a1a;">issue_date</strong> — required (YYYY-MM-DD)</div>
+        <div><strong style="color:#1a1a1a;">expiry_date</strong> — optional</div>
+        <div><strong style="color:#1a1a1a;">skill_category</strong> — optional</div>
+        <div><strong style="color:#1a1a1a;">level</strong> — Beginner/Intermediate/Advanced</div>
+        <div><strong style="color:#1a1a1a;">credential_url</strong> — optional</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:0.85rem;color:rgba(0,0,0,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.875rem;">Example CSV</h3>
+      <a href="data:text/csv;charset=utf-8,title,provider,issue_date,skill_category,level%0AAWS%20Certified,Amazon,2024-01-15,Technology,Advanced%0APython%20for%20DS,Coursera,2024-02-20,Data%20Science,Intermediate" download="microcred_template.csv" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;"><i class="fas fa-download"></i> Download Template</a>
+    </div>
+  </div>
+</div>
+<script>
+const fi=document.getElementById('csvFile'),prev=document.getElementById('csvPrev'),dz=document.getElementById('csvDrop');
+fi.addEventListener('change',()=>{if(fi.files[0]){prev.textContent='📎 '+fi.files[0].name;prev.style.display='block';}});
+['dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor=ev==='dragover'?'#c47a1a':'rgba(0,0,0,0.15)';if(ev==='drop'&&e.dataTransfer.files[0]){fi.files=e.dataTransfer.files;prev.textContent='📎 '+e.dataTransfer.files[0].name;prev.style.display='block';}}));
+</script>
+{% endblock %}

@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.name }}'s Profile{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+  <!-- Profile Header -->
+  <div class="profile-header">
+    <div class="profile-avatar" style="background: {{ user.avatar_color }};">
+      {{ user.name[0].upper() }}
+    </div>
+    
+    <div class="profile-info">
+      <h1>{{ user.name }}</h1>
+      <p class="headline">{{ user.headline or 'No headline' }}</p>
+      <p class="role">
+        <span class="badge badge-{{ user.role }}">{{ user.role|title }}</span>
+      </p>
+      
+      <div class="profile-details">
+        {% if user.location %}
+        <span><i class="fas fa-map-marker-alt"></i> {{ user.location }}</span>
+        {% endif %}
+        {% if user.email %}
+        <span><i class="fas fa-envelope"></i> {{ user.email }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Connection Button -->
+      <div class="action-buttons">
+        {% if connection %}
+          {% if connection.status == 'pending' %}
+            {% if connection.requester_id == current_user_id %}
+              <button class="btn btn-secondary" disabled>
+                <i class="fas fa-clock"></i> Request Pending
+              </button>
+            {% else %}
+              <button class="btn btn-success" onclick="acceptConnection({{ connection.connection_id }})">
+                <i class="fas fa-check"></i> Accept Connection
+              </button>
+              <button class="btn btn-danger" onclick="rejectConnection({{ connection.connection_id }})">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            {% endif %}
+          {% else %}
+            <button class="btn btn-secondary" disabled>
+              <i class="fas fa-check-circle"></i> Connected
+            </button>
+          {% endif %}
+        {% else %}
+          <button class="btn btn-primary" onclick="sendConnection({{ user.user_id }})">
+            <i class="fas fa-user-plus"></i> Connect
+          </button>
+        {% endif %}
+        
+        <a href="/helpline" class="btn btn-info">
+          <i class="fas fa-question-circle"></i> Help
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bio Section -->
+  {% if user.bio %}
+  <div class="bio-section">
+    <h3>About</h3>
+    <p>{{ user.bio }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Verified Credentials -->
+  {% if credentials %}
+  <div class="credentials-section">
+    <h3>Verified Credentials ({{ credentials|length }})</h3>
+    <div class="credentials-grid">
+      {% for cred in credentials %}
+      <div class="credential-card">
+        <h4>{{ cred.title }}</h4>
+        <p class="issuer">{{ cred.issuer }}</p>
+        <p class="date">{{ cred.created_at[:10] }}</p>
+        <a href="/credential/{{ cred.credential_id }}" class="link">View Details</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Mutual Connections -->
+  {% if mutual %}
+  <div class="mutual-section">
+    <h3>Mutual Connections ({{ mutual|length }})</h3>
+    <div class="users-grid">
+      {% for m in mutual %}
+      <div class="user-card">
+        <h4>{{ m.name }}</h4>
+        <p class="role">{{ m.role|title }}</p>
+        {% if m.location %}
+        <p class="location"><i class="fas fa-map-marker-alt"></i> {{ m.location }}</p>
+        {% endif %}
+        <a href="/view-profile/{{ m.user_id }}" class="link">View Profile</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Same Region Users -->
+  {% if same_region %}
+  <div class="region-section">
+    <h3>People in {{ user.location or 'Your Region' }}</h3>
+    <div class="users-grid">
+      {% for u in same_region %}
+      <div class="user-card">
+        <h4>{{ u.name }}</h4>
+        <p class="role">{{ u.role|title }}</p>
+        <a href="/view-profile/{{ u.user_id }}" class="link">View Profile</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Social Links -->
+  <div class="social-section">
+    <h3>Connect</h3>
+    <div class="social-links">
+      {% if user.linkedin %}
+      <a href="https://linkedin.com/in/{{ user.linkedin }}" target="_blank" class="social-link">
+        <i class="fab fa-linkedin"></i> LinkedIn
+      </a>
+      {% endif %}
+      {% if user.github %}
+      <a href="https://github.com/{{ user.github }}" target="_blank" class="social-link">
+        <i class="fab fa-github"></i> GitHub
+      </a>
+      {% endif %}
+      {% if user.website %}
+      <a href="{{ user.website }}" target="_blank" class="social-link">
+        <i class="fas fa-globe"></i> Website
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.profile-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.profile-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: white;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info h1 {
+  color: var(--text-primary);
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.headline {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge-learner {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-employer {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.badge-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.profile-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+}
+
+.profile-details span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #a65c1a 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 122, 26, 0.3);
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-info {
+  background: #0ea5e9;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #0284c7;
+}
+
+/* Sections */
+.bio-section, .credentials-section, .mutual-section, .region-section, .social-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+h3 {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.bio-section p {
+  color: var(--text-primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Credentials Grid */
+.credentials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.credential-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.credential-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(196, 122, 26, 0.1);
+}
+
+.credential-card h4 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.issuer {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.date {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.link:hover {
+  color: #a65c1a;
+  text-decoration: underline;
+}
+
+/* Users Grid */
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.user-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.user-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(196, 122, 26, 0.1);
+}
+
+.user-card h4 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.user-card .role {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.location {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* Social Links */
+.social-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.social-link:hover {
+  background: var(--accent);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .action-buttons {
+    justify-content: center;
+  }
+
+  .credentials-grid, .users-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+function sendConnection(userId) {
+  fetch(`/connect/${userId}`, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        alert('Connection request sent!');
+        location.reload();
+      } else {
+        alert(d.error);
+      }
+    });
+}
+
+function acceptConnection(connectionId) {
+  fetch(`/accept-connection/${connectionId}`, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        location.reload();
+      } else {
+        alert(d.error);
+      }
+    });
+}
+
+function rejectConnection(connectionId) {
+  fetch(`/reject-connection/${connectionId}`, {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        location.reload();
+      } else {
+        alert(d.error);
+      }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  microvault:
+    build: .
+    container_name: microvault-app
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-your-email@gmail.com}
+      MAIL_PASS: ${MAIL_PASS:-your-app-password}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-your-twilio-sid}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-your-twilio-token}
+      TWILIO_PHONE: ${TWILIO_PHONE:-+1234567890}
+    volumes:
+      - ./microcred_integrated:/app
+      - ./data:/app/instance
+      - ./logs:/app/logs
+      - ./uploads:/app/static/uploads
+    networks:
+      - microvault-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL Database
+  # Uncomment to use PostgreSQL instead of SQLite
+  # postgres:
+  #   image: postgres:13-alpine
+  #   container_name: microvault-db
+  #   environment:
+  #     POSTGRES_DB: microvault
+  #     POSTGRES_USER: microvault
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - microvault-network
+  #   restart: unless-stopped
+
+  # Optional: Nginx Reverse Proxy
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: microvault-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./certs:/etc/nginx/certs:ro
+  #   depends_on:
+  #     - microvault
+  #   networks:
+  #     - microvault-network
+  #   restart: unless-stopped
+
+networks:
+  microvault-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

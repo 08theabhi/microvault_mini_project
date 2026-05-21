@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Register - MicroCred{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="max-width: 600px; margin: 2rem auto;">
+        <div class="reveal">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="text-primary">Create Your Account</h1>
+                <p class="text-secondary" style="margin-top: 0.5rem;">
+                    Join MicroCred to securely manage and verify your micro-credentials
+                </p>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="card">
+                <form method="POST" action="/register" id="registerForm">
+                    <!-- Step 1: Basic Info -->
+                    <fieldset id="step1">
+                        <h3 class="text-primary mb-3">Basic Information</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="firstName">First Name *</label>
+                                <input 
+                                    type="text" 
+                                    id="firstName" 
+                                    name="firstName" 
+                                    placeholder="John"
+                                    required
+                                    value="{{ request.form.get('firstName', '') }}"
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lastName">Last Name *</label>
+                                <input 
+                                    type="text" 
+                                    id="lastName" 
+                                    name="lastName" 
+                                    placeholder="Doe"
+                                    required
+                                    value="{{ request.form.get('lastName', '') }}"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                placeholder="you@example.com"
+                                required
+                                value="{{ request.form.get('email', '') }}"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input 
+                                type="tel" 
+                                id="phone" 
+                                name="phone" 
+                                placeholder="+1 (555) 000-0000"
+                                required
+                                value="{{ request.form.get('phone', '') }}"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="role">Account Type *</label>
+                            <select id="role" name="role" required>
+                                <option value="">Select your role...</option>
+                                <option value="learner" {% if request.form.get('role') == 'learner' %}selected{% endif %}>
+                                    Learner - I want to manage my credentials
+                                </option>
+                                <option value="employer" {% if request.form.get('role') == 'employer' %}selected{% endif %}>
+                                    Employer - I want to verify credentials
+                                </option>
+                            </select>
+                        </div>
+                    </fieldset>
+
+                    <!-- Step 2: Password -->
+                    <fieldset id="step2" style="display: none;">
+                        <h3 class="text-primary mb-3">Set Your Password</h3>
+                        
+                        <div class="form-group">
+                            <label for="password">Password *</label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                placeholder="••••••••"
+                                required
+                                minlength="8"
+                            >
+                            <p class="text-light" style="font-size: 0.8rem; margin-top: 0.3rem;">
+                                <i class="fas fa-info-circle"></i> At least 8 characters, with numbers and special characters
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password *</label>
+                            <input 
+                                type="password" 
+                                id="confirmPassword" 
+                                name="confirmPassword" 
+                                placeholder="••••••••"
+                                required
+                            >
+                        </div>
+
+                        <div style="background-color: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+                            <div class="text-primary" style="font-weight: 600; margin-bottom: 0.5rem;">
+                                <i class="fas fa-shield-alt" style="color: var(--accent); margin-right: 0.5rem;"></i>
+                                Password Requirements
+                            </div>
+                            <ul style="list-style: none; font-size: 0.85rem; color: var(--text-secondary);">
+                                <li id="req-length"><i class="fas fa-times" style="color: #dc2626; margin-right: 0.4rem;"></i>At least 8 characters</li>
+                                <li id="req-upper"><i class="fas fa-times" style="color: #dc2626; margin-right: 0.4rem;"></i>At least one uppercase letter</li>
+                                <li id="req-number"><i class="fas fa-times" style="color: #dc2626; margin-right: 0.4rem;"></i>At least one number</li>
+                                <li id="req-special"><i class="fas fa-times" style="color: #dc2626; margin-right: 0.4rem;"></i>At least one special character (!@#$%^&*)</li>
+                            </ul>
+                        </div>
+                    </fieldset>
+
+                    <!-- Step 3: Verification -->
+                    <fieldset id="step3" style="display: none;">
+                        <h3 class="text-primary mb-3">Verify Your Account</h3>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-envelope"></i>
+                            <span>We've sent a verification code to <strong id="emailDisplay"></strong></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="otp">Enter Verification Code *</label>
+                            <input 
+                                type="text" 
+                                id="otp" 
+                                name="otp" 
+                                placeholder="000000"
+                                required
+                                maxlength="6"
+                                pattern="[0-9]{6}"
+                            >
+                        </div>
+
+                        <div class="text-center text-secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                            Didn't receive a code? <a href="#" onclick="resendOTP()" style="color: var(--accent); font-weight: 600;">Resend</a>
+                        </div>
+                    </fieldset>
+
+                    <!-- Terms & Conditions -->
+                    <div class="form-check" style="background-color: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.5rem;">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms" class="text-secondary">
+                            I agree to the <a href="/terms" style="color: var(--accent);">Terms of Service</a> and 
+                            <a href="/privacy" style="color: var(--accent);">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <!-- Navigation Buttons -->
+                    <div style="display: flex; gap: 1rem; justify-content: space-between;">
+                        <button type="button" id="prevBtn" class="btn btn-secondary" onclick="previousStep()" style="display: none;">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </button>
+                        
+                        <button type="button" id="nextBtn" class="btn btn-primary" onclick="nextStep()" style="flex: 1;">
+                            <i class="fas fa-arrow-right"></i> Next
+                        </button>
+                        
+                        <button type="submit" id="submitBtn" class="btn btn-primary" style="flex: 1; display: none;">
+                            <i class="fas fa-check"></i> Create Account
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Sign In Link -->
+                <div class="text-center mt-4" style="padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    <p class="text-secondary">
+                        Already have an account? 
+                        <a href="/login" style="color: var(--accent); font-weight: 600;">Sign In</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 3;
+
+    function showStep(n) {
+        const steps = document.querySelectorAll('fieldset');
+        
+        if (n > totalSteps) n = totalSteps;
+        if (n < 1) n = 1;
+        
+        steps.forEach(step => step.style.display = 'none');
+        document.getElementById('step' + n).style.display = 'block';
+        
+        currentStep = n;
+        
+        // Update button visibility
+        document.getElementById('prevBtn').style.display = n === 1 ? 'none' : 'inline-flex';
+        document.getElementById('nextBtn').style.display = n === totalSteps ? 'none' : 'inline-flex';
+        document.getElementById('submitBtn').style.display = n === totalSteps ? 'inline-flex' : 'none';
+    }
+
+    function nextStep() {
+        if (validateStep(currentStep)) {
+            if (currentStep === 1) {
+                document.getElementById('emailDisplay').textContent = document.getElementById('email').value;
+            }
+            showStep(currentStep + 1);
+        }
+    }
+
+    function previousStep() {
+        showStep(currentStep - 1);
+    }
+
+    function validateStep(step) {
+        if (step === 1) {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const role = document.getElementById('role').value;
+
+            if (!firstName || !lastName || !email || !phone || !role) {
+                alert('Please fill in all fields');
+                return false;
+            }
+            return true;
+        }
+
+        if (step === 2) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
+                return false;
+            }
+
+            if (!validatePassword(password)) {
+                alert('Password does not meet requirements');
+                return false;
+            }
+            return true;
+        }
+
+        if (step === 3) {
+            const otp = document.getElementById('otp').value;
+            if (!otp || otp.length !== 6) {
+                alert('Please enter a valid 6-digit code');
+                return false;
+            }
+            return true;
+        }
+
+        return true;
+    }
+
+    function validatePassword(password) {
+        const hasLength = password.length >= 8;
+        const hasUpper = /[A-Z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecial = /[!@#$%^&*]/.test(password);
+
+        updateRequirement('length', hasLength);
+        updateRequirement('upper', hasUpper);
+        updateRequirement('number', hasNumber);
+        updateRequirement('special', hasSpecial);
+
+        return hasLength && hasUpper && hasNumber && hasSpecial;
+    }
+
+    function updateRequirement(req, met) {
+        const element = document.getElementById('req-' + req);
+        if (met) {
+            element.innerHTML = '<i class="fas fa-check" style="color: #059669; margin-right: 0.4rem;"></i>' + element.textContent.replace(/^[^\s]*\s/, '');
+        }
+    }
+
+    function resendOTP() {
+        alert('OTP resent to ' + document.getElementById('email').value);
+    }
+
+    // Password validation on input
+    document.getElementById('password').addEventListener('input', (e) => {
+        validatePassword(e.target.value);
+    });
+
+    // Initialize
+    showStep(1);
+</script>
+{% endblock %}

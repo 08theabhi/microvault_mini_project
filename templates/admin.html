@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+  <!-- Admin Header -->
+  <div class="admin-header reveal">
+    <div class="admin-title-section">
+      <h1>Admin Dashboard</h1>
+      <p class="subtitle">System Overview & Management</p>
+    </div>
+    <div class="admin-actions">
+      <a href="/admin" class="btn btn-secondary btn-sm"><i class="fas fa-sync"></i> Refresh</a>
+      <a href="/admin/users" class="btn btn-secondary btn-sm"><i class="fas fa-users"></i> Manage Users</a>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid reveal">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">Total Users</p>
+        <h2 class="stat-value">{{ total_users | default(0) }}</h2>
+        <span class="stat-change positive">↑ {{ new_users_this_month | default(0) }} this month</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <i class="fas fa-certificate"></i>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">Total Credentials</p>
+        <h2 class="stat-value">{{ total_credentials | default(0) }}</h2>
+        <span class="stat-change positive">↑ {{ new_credentials_this_month | default(0) }} this month</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">Verified</p>
+        <h2 class="stat-value">{{ verified_count | default(0) }}</h2>
+        <span class="stat-change">{{ verification_rate | default(0) }}% verified</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+      <div class="stat-content">
+        <p class="stat-label">Pending Review</p>
+        <h2 class="stat-value">{{ pending_count | default(0) }}</h2>
+        <span class="stat-change warning">Needs attention</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="charts-grid reveal">
+    <!-- User Registrations Over Time -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>User Registrations Over Time</h3>
+        <p class="chart-description">Monthly user growth trends</p>
+      </div>
+      <canvas id="registrationsChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Credentials by Category -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Credentials by Category</h3>
+        <p class="chart-description">Distribution across credential types</p>
+      </div>
+      <canvas id="categoryChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Credentials Uploaded Over Time -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Credentials Uploaded Over Time</h3>
+        <p class="chart-description">Monthly credential uploads</p>
+      </div>
+      <canvas id="uploadsChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Verification Rate -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Verification Rate</h3>
+        <p class="chart-description">Credential verification percentage</p>
+      </div>
+      <div class="verification-gauge">
+        <canvas id="verificationChart" style="max-height: 300px;"></canvas>
+        <p class="verification-text">{{ verification_rate | default(0) }}% of credentials verified</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Management Tables -->
+  <div class="admin-section reveal">
+    <div class="section-header">
+      <h2>Recent Verifications</h2>
+      <a href="/admin/review" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+    
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Credential</th>
+            <th>Type</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent_credentials %}
+            {% for cred in recent_credentials[:10] %}
+            <tr>
+              <td>
+                <a href="/admin/user/{{ cred.user_id }}" class="user-link">
+                  {{ cred.user_name }}
+                </a>
+              </td>
+              <td>{{ cred.title }}</td>
+              <td>
+                <span class="badge badge-{{ cred.category_slug }}">
+                  {{ cred.category }}
+                </span>
+              </td>
+              <td>{{ cred.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>
+                <span class="status-badge status-{{ cred.status }}">
+                  {{ cred.status | title }}
+                </span>
+              </td>
+              <td>
+                <a href="/admin/credential/{{ cred.id }}" class="btn btn-secondary btn-xs">
+                  Review
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem;">
+              <p class="text-secondary">No credentials to review</p>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- System Health Section -->
+  <div class="admin-section reveal">
+    <div class="section-header">
+      <h2>System Health</h2>
+    </div>
+    
+    <div class="health-grid">
+      <div class="health-item">
+        <div class="health-indicator good"></div>
+        <div class="health-content">
+          <p class="health-label">Database</p>
+          <p class="health-status">Connected & Healthy</p>
+        </div>
+      </div>
+
+      <div class="health-item">
+        <div class="health-indicator good"></div>
+        <div class="health-content">
+          <p class="health-label">Email Service</p>
+          <p class="health-status">Gmail SMTP Active</p>
+        </div>
+      </div>
+
+      <div class="health-item">
+        <div class="health-indicator good"></div>
+        <div class="health-content">
+          <p class="health-label">SMS Service</p>
+          <p class="health-status">Twilio Connected</p>
+        </div>
+      </div>
+
+      <div class="health-item">
+        <div class="health-indicator good"></div>
+        <div class="health-content">
+          <p class="health-label">API Response Time</p>
+          <p class="health-status">< 200ms Average</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Admin Container */
+.admin-container {
+  padding: 2rem;
+  background: var(--bg-primary);
+}
+
+/* Admin Header */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.admin-title-section h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+
+.admin-title-section .subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Statistics Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(196, 122, 26, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.stat-change {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-change.positive {
+  color: #10b981;
+}
+
+.stat-change.warning {
+  color: #f59e0b;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(196, 122, 26, 0.1);
+}
+
+.chart-header {
+  margin-bottom: 1.5rem;
+}
+
+.chart-header h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.chart-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.verification-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.verification-text {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Admin Section */
+.admin-section {
+  margin-bottom: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Table Styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.admin-table thead {
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.admin-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.admin-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.admin-table tbody tr:hover {
+  background-color: rgba(196, 122, 26, 0.05);
+}
+
+.admin-table td {
+  padding: 1rem;
+  color: var(--text-primary);
+}
+
+.user-link {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.user-link:hover {
+  color: #a65c1a;
+  text-decoration: underline;
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.badge-certificate {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-badge {
+  background-color: #fce7f3;
+  color: #be185d;
+}
+
+.badge-license {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-degree {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-other {
+  background-color: #e0e7ff;
+  color: #312e81;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-verified {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-under-review {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Health Grid */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.health-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid var(--accent);
+}
+
+.health-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+
+.health-indicator.good {
+  background-color: #10b981;
+}
+
+.health-indicator.warning {
+  background-color: #f59e0b;
+}
+
+.health-indicator.error {
+  background-color: #ef4444;
+}
+
+.health-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.health-status {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 1rem;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-title-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-table {
+    font-size: 0.85rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem;
+  }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Color palette with DARK TEXT for visibility
+  const palette = {
+    primary: '#667eea',
+    secondary: '#764ba2',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    info: '#06b6d4',
+    accent: '#c47a1a'
+  };
+
+  const chartColors = [
+    '#c47a1a', // Accent orange
+    '#2dd4bf', // Teal
+    '#34d399', // Green
+    '#fb7185', // Red
+    '#a78bfa', // Purple
+    '#60a5fa', // Blue
+    '#f472b6'  // Pink
+  ];
+
+  // Chart options with DARK TEXT
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          color: '#1a1a1a',      // DARK TEXT
+          font: { family: 'DM Sans', size: 12 },
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a1a1a',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#c47a1a',
+        borderWidth: 1,
+        padding: 12,
+        displayColors: true,
+        callbacks: {
+          label: function(context) {
+            return ' ' + context.parsed.y;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#1a1a1a',      // DARK TEXT for Y-axis
+          font: { family: 'DM Sans', size: 11, weight: 500 },
+          padding: 8,
+          stepSize: 1
+        },
+        grid: {
+          color: 'rgba(26, 26, 26, 0.08)',
+          drawBorder: true,
+          borderColor: 'rgba(26, 26, 26, 0.1)'
+        }
+      },
+      x: {
+        ticks: {
+          color: '#1a1a1a',      // DARK TEXT for X-axis
+          font: { family: 'DM Sans', size: 11, weight: 500 },
+          padding: 8
+        },
+        grid: {
+          display: false,
+          drawBorder: true,
+          borderColor: 'rgba(26, 26, 26, 0.1)'
+        }
+      }
+    }
+  };
+
+  // User Registrations Chart
+  const registrationsCtx = document.getElementById('registrationsChart');
+  if (registrationsCtx) {
+    new Chart(registrationsCtx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+          label: 'New Users',
+          data: [2, 3, 2, 4, 3, 5],
+          borderColor: palette.primary,
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: palette.primary,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        ...chartOptions,
+        plugins: {
+          ...chartOptions.plugins,
+          filler: { propagate: true }
+        }
+      }
+    });
+  }
+
+  // Credentials by Category Chart
+  const categoryCtx = document.getElementById('categoryChart');
+  if (categoryCtx) {
+    new Chart(categoryCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Certificate', 'Badge', 'License', 'Degree'],
+        datasets: [{
+          data: [35, 28, 20, 17],
+          backgroundColor: chartColors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverBorderColor: '#1a1a1a',
+          hoverBorderWidth: 3
+        }]
+      },
+      options: {
+        ...chartOptions,
+        plugins: {
+          ...chartOptions.plugins,
+          legend: {
+            ...chartOptions.plugins.legend,
+            position: 'bottom'
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
+
+  // Credentials Uploaded Over Time Chart
+  const uploadsCtx = document.getElementById('uploadsChart');
+  if (uploadsCtx) {
+    new Chart(uploadsCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+          label: 'Credentials Uploaded',
+          data: [8, 10, 7, 13, 11, 9],
+          backgroundColor: palette.info,
+          borderColor: palette.info,
+          borderRadius: 8,
+          borderSkipped: false,
+          hoverBackgroundColor: palette.primary
+        }]
+      },
+      options: {
+        ...chartOptions,
+        indexAxis: 'x'
+      }
+    });
+  }
+
+  // Verification Rate Gauge Chart
+  const verificationCtx = document.getElementById('verificationChart');
+  if (verificationCtx) {
+    new Chart(verificationCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified', 'Pending'],
+        datasets: [{
+          data: [69.2, 30.8],
+          backgroundColor: [palette.success, '#e5e7eb'],
+          borderColor: '#ffffff',
+          borderWidth: 3,
+          hoverBorderColor: '#1a1a1a'
+        }]
+      },
+      options: {
+        ...chartOptions,
+        cutout: '70%',
+        plugins: {
+          ...chartOptions.plugins,
+          legend: {
+            ...chartOptions.plugins.legend,
+            display: false
+          },
+          tooltip: {
+            ...chartOptions.plugins.tooltip,
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.parsed.y.toFixed(1) + '%';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
